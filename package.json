@@ -1,0 +1,23 @@
+{
+  "name": "ts-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "lite-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IdoS88/typescript-resource-store.git"
+  },
+  "author": "Ido",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/IdoS88/typescript-resource-store/issues"
+  },
+  "homepage": "https://github.com/IdoS88/typescript-resource-store#readme",
+  "devDependencies": {
+    "lite-server": "^2.6.1"
+  }
+}

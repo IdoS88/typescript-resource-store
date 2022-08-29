@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <style>
+    table,
+    th,
+    td {
+      border: 1px solid black;
+      width:auto;
+    }
+  </style>
+  <body>
+    <table style="width: 100%">
+      <tr>
+        <th>Items insertion</th>
+      </tr>
+      <tr>
+        <!-- item insertion section-->
+        <th>Please insert an item and it's amount:</th>
+      </tr>
+      <tr>
+        <td wud>
+          <form>
+            <label for="type">Item type</label><br />
+            <input type="text" id="type" name="resourse type" required /><br />
+            <label for="amount">Amount</label><br />
+            <input type="text" id="amount" name="0" required /><br />
+            <input type="submit" value="Submit" /><br />
+            <input type="reset" />
+          </form>
+        </td>
+      </tr>
+      <!--item withdraw/borrowing-->
+      <tr>
+        <th>What would you like to take?</th>
+      </tr>
+      <tr>
+        <td>
+          <form>
+            <label for="list">Item type</label><br />
+            <select id="list" name="list" required></select
+            ><br />
+            <label for="amount">Amount</label><br />
+            <input type="text" id="amount" name="amount" required /><br />
+            <input type="submit" value="Submit" /><br />
+            <input type="reset" />
+          </form>
+        </td>
+      </tr>
+      <!--output-->
+      <tr>
+        <th>Resource store status</th>
+      </tr>
+      <tr>
+        <td>
+          <div><p id="status" name="status">store status</p></div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
