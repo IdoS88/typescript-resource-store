@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
+    <script>var exports = {};</script>
   </head>
   <style>
     table,
@@ -25,11 +26,11 @@
       </tr>
       <tr>
         <td wud>
-          <form>
+          <form id="formInsert" name="formInsert">
             <label for="type">Item type</label><br />
-            <input type="text" id="type" name="resourse type" required /><br />
-            <label for="amount">Amount</label><br />
-            <input type="text" id="amount" name="0" required /><br />
+            <input type="text" id="type" name="type" required /><br />
+            <label for="amountInsertion">Amount</label><br />
+            <input type="text" id="amountInsertion" name="amountInsertion" required /><br />
             <input type="submit" value="Submit" /><br />
             <input type="reset" />
           </form>
@@ -45,8 +46,8 @@
             <label for="list">Item type</label><br />
             <select id="list" name="list" required></select
             ><br />
-            <label for="amount">Amount</label><br />
-            <input type="text" id="amount" name="amount" required /><br />
+            <label for="amountBorrow">Amount</label><br />
+            <input type="text" id="amountBorrow" name="amountBorrow" required /><br />
             <input type="submit" value="Submit" /><br />
             <input type="reset" />
           </form>
@@ -58,9 +59,10 @@
       </tr>
       <tr>
         <td>
-          <div><p id="status" name="status">store status</p></div>
+          <div id="status"><p>store status</p></div>
         </td>
       </tr>
     </table>
+    <script src="dest/validators.js"></script>
   </body>
 </html>

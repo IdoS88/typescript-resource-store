@@ -6,13 +6,13 @@ class Resource {
     this.name = name;
     this.amount = amount;
   }
-  set updateResourceAmount(amount: number) {
+  public set updateResourceAmount(amount: number) {
     this.amount += amount;
   }
-  get getResourceName() {
+  public get getResourceName() {
     return this.name;
   }
-  get getResourceAmount() {
+  public get getResourceAmount() {
     return this.amount;
   }
 }

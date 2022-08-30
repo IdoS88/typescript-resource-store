@@ -14,10 +14,11 @@ class Resource {
         return this.amount;
     }
 }
-const item = new Resource("water", 100);
-item.updateResourceAmount = 4;
-let p = document.getElementById("status");
-if (p) {
-    p.innerHTML = item.getResourceAmount + item.getResourceName;
-}
-console.log(item.getResourceAmount + item.getResourceName);
+// const item: Resource = new Resource("water", 100);
+// item.updateResourceAmount = 4;
+// let p = document.getElementById("status");
+// if (p) {
+//   p.innerHTML = item.getResourceAmount + item.getResourceName;
+// }
+// console.log(item.getResourceAmount + item.getResourceName);
+//# sourceMappingURL=resource.js.map
