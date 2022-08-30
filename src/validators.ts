@@ -3,10 +3,6 @@ import {
   validateOrReject,
   Contains,
   IsInt,
-  Length,
-  IsEmail,
-  IsFQDN,
-  IsDate,
   Min,
   Max,
   MinLength,
@@ -19,41 +15,48 @@ import {
   isString,
   IsString,
   IsEmpty,
-  ValidatorOptions
+  ValidatorOptions,
+  IsNotEmpty,
 } from "class-validator";
 
 export class Post {
-
-    @IsEmpty()
-    @IsString()
-    @MinLength(2, {
-        message: (args: ValidationArguments) => {
-          if (args.value.length === 2) {
-            return 'Too short, minimum length is 2 character';
-          } else {
-            return 'Too short, minimum length is ' + args.constraints[0] + ' characters';
-          }
-        },
-      })
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(2, {
+    message: (args: ValidationArguments) => {
+      if (args.value.length === 2) {
+        return "Too short, minimum length is 2 character";
+      } else {
+        return (
+          "Too short, minimum length is " + args.constraints[0] + " characters"
+        );
+      }
+    },
+  })
   title!: string;
 
-
-  @IsEmpty()
+  @IsNotEmpty()
   @IsInt()
   @Min(0)
   @Max(10)
   amount!: number;
-      
-  
-
 }
 let post = new Post();
-post.title = ""; // should not pass
+ // should not pass
 post.amount = -2;
 validate(post).then((errors) => {
   // errors is an array of validation errors
   if (errors.length > 0) {
     console.log("validation failed. errors: ", errors);
+    errors.forEach((element) => {
+      if(element.constraints){
+      for(let [key,value] of Object.entries(element.constraints))
+        {
+          console.log(value);
+          alert("Error type form " + value);
+        }
+      }
+    });
   } else {
     console.log("validation succeed");
   }
