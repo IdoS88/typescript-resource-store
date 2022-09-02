@@ -9,77 +9,80 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Post = void 0;
 const class_validator_1 = require("class-validator");
 class Post {
-}
-__decorate([
-    (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MinLength)(2, {
-        message: (args) => {
-            if (args.value.length === 2) {
-                return "Too short, minimum length is 2 character";
+    // [Symbol.iterator]: function* () {
+    //   let properties = Object.keys(this);
+    //   for (let i of properties) {
+    //       yield [i, this[i]];
+    //   }
+    set setTitle(title) {
+        this.title = title;
+    }
+    set setAmount(amount) {
+        this.amount = amount;
+    }
+    validate(input) {
+        // if(Array.isArray(input)){
+        //   [this.title, this.amount] = <[string,number]>input.gatherUserInput();
+        // }
+        (0, class_validator_1.validate)(this).then((errors) => {
+            // errors is an array of validation errors
+            if (errors.length > 0) {
+                console.log("validation failed. errors: ", errors);
+                console.log(typeof errors[0].constraints);
+                alertAllErrors(errors);
             }
             else {
-                return ("Too short, minimum length is " + args.constraints[0] + " characters");
+                console.log("validation succeed");
             }
-        },
-    }),
+        });
+        //alert function for showing errors infront
+        function alertAllErrors(errors) {
+            // errors is an array of validation errors
+            // has property object 'constraints' which has the error description messages
+            errors.forEach((element) => {
+                if (element.constraints) {
+                    for (const value of Object.values(element.constraints)) {
+                        alert(value);
+                    }
+                }
+            });
+        }
+        (0, class_validator_1.validateOrReject)(this).catch((errors) => {
+            console.log("Promise rejected (validation failed). Errors: ", errors);
+        });
+    }
+}
+__decorate([
+    (0, class_validator_1.MinLength)(2),
+    (0, class_validator_1.MaxLength)(15),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], Post.prototype, "title", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsInt)(),
     (0, class_validator_1.Min)(0),
     (0, class_validator_1.Max)(10),
+    (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
 ], Post.prototype, "amount", void 0);
 exports.Post = Post;
-let post = new Post();
-// should not pass
-post.amount = -2;
-(0, class_validator_1.validate)(post).then((errors) => {
-    // errors is an array of validation errors
-    if (errors.length > 0) {
-        console.log("validation failed. errors: ", errors);
-        errors.forEach((element) => {
-            if (element.constraints) {
-                for (let [key, value] of Object.entries(element.constraints)) {
-                    console.log(value);
-                    alert("Error type form " + value);
-                }
-            }
-        });
-    }
-    else {
-        console.log("validation succeed");
-    }
-});
-(0, class_validator_1.validateOrReject)(post).catch((errors) => {
-    console.log("Promise rejected (validation failed). Errors: ", errors);
-});
+// function alertErrorMessages(errors:ValidationError[]){
+// }
+// }
 // or
-function validateOrRejectExample(input) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            yield (0, class_validator_1.validateOrReject)(input);
-        }
-        catch (errors) {
-            console.log("Caught promise rejection (validation failed). Errors: ", errors);
-        }
-    });
-}
+// async function validateOrRejectExample(input: Post) {
+//   try {
+//     await validateOrReject(input);
+//   } catch (errors) {
+//     console.log(
+//       "Caught promise rejection (validation failed). Errors: ",
+//       errors
+//     );
+//   }
 // export interface ValidatorOptions {
 //   skipMissingProperties?: boolean;
 //   whitelist?: boolean;
@@ -92,7 +95,6 @@ function validateOrRejectExample(input) {
 //   };
 //   forbidUnknownValues?: boolean;
 //   stopAtFirstError?: boolean;
-// }
 
 },{"class-validator":111}],2:[function(require,module,exports){
 "use strict";

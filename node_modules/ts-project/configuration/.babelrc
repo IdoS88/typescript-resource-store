@@ -1,0 +1,13 @@
+{
+  "presets": [
+    ["es2015", {"modules": false}],
+    "stage-2"
+  ],
+  "env": {
+    "test": {
+      "plugins": [
+        ["__coverage__", {"ignore": "*.+(test|stub).*"}]
+      ]
+    }
+  }
+}
