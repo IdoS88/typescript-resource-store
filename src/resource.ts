@@ -1,4 +1,7 @@
-class Resource {
+// Project State Management
+type Listener = (items: Resource[]) => void;
+
+export class Resource {
   private name: string;
   private amount: number;
 
@@ -15,7 +18,48 @@ class Resource {
   public get getResourceAmount() {
     return this.amount;
   }
+
 }
+export class ResourceStorage {
+  private listeners: Listener[] = [];
+  private resources: Resource[] = [];
+  private static instance: ResourceStorage;
+
+  private constructor() {}
+
+  static getInstance() {
+    if (this.instance) {
+      return this.instance;
+    }
+    this.instance = new ResourceStorage();
+    return this.instance;
+  }
+
+  addListener(listenerFn: Listener) {
+    this.listeners.push(listenerFn);
+  }
+
+  addResource(title: string, amount: number) {
+    const newResource = new Resource(
+      title,
+      amount
+      // ProjectStatus.Active
+    );
+    this.resources.push(newResource);
+    for (const listenerFn of this.listeners) {
+      listenerFn(this.resources.slice());
+    }
+  }
+  get getResources(){
+    if(this.resources[0].getResourceName)
+    return this.resources[0].getResourceName;
+    else return "null";
+  }
+}
+
+// export declare var data : ResourceStorage;
+// data = ResourceStorage.getInstance();
+
 
 // const item: Resource = new Resource("water", 100);
 // item.updateResourceAmount = 4;

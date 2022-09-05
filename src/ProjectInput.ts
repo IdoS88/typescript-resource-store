@@ -1,6 +1,7 @@
 
-import {Post} from './validators';
+import {Post} from './validators.js';
 import { ValidationOptions } from 'class-validator';
+import {Resource, ResourceStorage} from './resource.js'
 // autobind decorator
 export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
@@ -80,8 +81,13 @@ export class ProjectInput {
     if (Array.isArray(userInput)) {
       let validator = new Post();
       [validator.title,validator.amount] = userInput;
-      validator.validate(userInput);
-      // this.clearInputs();
+      if(validator.validate())
+      {
+       data.addResource(validator.title,validator.amount);
+       console.log("add");
+      }
+      this.clearInputs();
+      console.log(data.getResources);
     }
     else
     {
@@ -100,4 +106,8 @@ export class ProjectInput {
   
 }
 
+// export declare var data : ResourceStorage;
+const data = ResourceStorage.getInstance();
+
 const prjInput = new ProjectInput();
+
