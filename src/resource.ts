@@ -1,7 +1,10 @@
+import { IsInt } from "class-validator";
+
 // Project State Management
 type Listener = (items: Resource[]) => void;
 
 export class Resource {
+  [k: string]: any;
   private name: string;
   private amount: number;
 
@@ -18,14 +21,14 @@ export class Resource {
   public get getResourceAmount() {
     return this.amount;
   }
-
 }
 export class ResourceStorage {
   private listeners: Listener[] = [];
   private resources: Resource[] = [];
   private static instance: ResourceStorage;
 
-  private constructor() {}
+  private constructor() {
+  }
 
   static getInstance() {
     if (this.instance) {
@@ -40,26 +43,98 @@ export class ResourceStorage {
   }
 
   addResource(title: string, amount: number) {
+
+    // create instance of resource
     const newResource = new Resource(
       title,
       amount
       // ProjectStatus.Active
     );
-    this.resources.push(newResource);
-    for (const listenerFn of this.listeners) {
-      listenerFn(this.resources.slice());
+// first checks if input isn't for the first item of resource storage array or if it's of an existing item
+//because there are 2 options wether we want to add a new item or update existing item
+    if(Array.isArray(this.getResources) && this.getResources.length !==0 && this.getResources.some(function (r) {
+      return r.getResourceName === title;
+    })){
+      // update item
+    this.UpdateExistingItem = newResource;
+    console.log("update item (name: "+title+", amount: "+amount+")");
+    alert("update item (name: "+title+", amount: "+amount+")");
     }
+    else if (this.resources.push(newResource)){ console.log("push");
+    // add a new item to resources array
+    }
+  
+    
+    
+    for (const listenerFn of this.listeners) {
+      (this as any)[listenerFn.name](this.resources.slice());
+      console.log(listenerFn);
+    }
+    return true;
   }
-  get getResources(){
-    if(this.resources[0].getResourceName)
-    return this.resources[0].getResourceName;
+  get getResources() {
+    if (this.resources) return this.resources;
     else return "null";
   }
+  set setResources(array: Resource[]) {
+    this.resources = array;
+  }
+  setResourceItem(@isAnInteger index:number, element: Resource){
+    this.resources[index] = element;
+  }
+  get getResourcesLength(): number {
+    return this.resources.length;
+  }
+  uniqByReduce(array: Resource[]) {
+    this.setResources = array.reduce((acc: Resource[], cur: Resource) => {
+      if (!acc.includes(cur)) {
+        acc.push(cur);
+      } else if (
+        acc.slice().filter(function (r) {
+          return r.getResourceName === cur.getResourceName;
+        }).length > 1) {
+          alert(`update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`);
+          console.log(`update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`);
+        // checks wether checked resource included in the array and just update it's amount
+        const i = acc.findIndex(
+          (r) => r.getResourceName === cur.getResourceName
+        ); 
+        if (cur.getResourceAmount >= acc[i].getResourceAmount) {
+          // index must be above -1 becuase it was questioned in the last if statement
+          acc[i] = acc.pop() as Resource;
+        }
+        else{
+          acc.pop();
+          alert("Cannot update amount less than actual amount. for that please withdraw the amount that been taken");
+        }
+      }
+      return acc;
+    }, []);
+  }
+  set UpdateExistingItem(r: Resource)
+  {
+    //a function to update existing item amount
+    const i = this.resources.findIndex(
+      (checked) => checked.getResourceName === r.getResourceName
+    ); 
+    // find existing item to be able to update
+if(Array.isArray(this.getResources)){
+    const previousAmount = this.getResources[i].getResourceAmount;
+    const sum = r.getResourceName + previousAmount;
+    alert(`update given resource: ${r.getResourceName} with given amount: ${sum}`)
+}
+    this.setResourceItem(i,r);
+    
+    alert();
+    console.log(`update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`)
+    
+    else return false;
+  }
+ 
 }
 
 // export declare var data : ResourceStorage;
 // data = ResourceStorage.getInstance();
-
 
 // const item: Resource = new Resource("water", 100);
 // item.updateResourceAmount = 4;

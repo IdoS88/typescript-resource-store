@@ -8,6 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectInput = exports.autobind = void 0;
 const validators_js_1 = require("./validators.js");
@@ -73,22 +82,25 @@ class ProjectInput {
         // this.peopleInputElement.value = '';
     }
     submitHandler(event) {
-        event.preventDefault();
-        const userInput = this.gatherUserInput();
-        if (Array.isArray(userInput)) {
-            let validator = new validators_js_1.Post();
-            [validator.title, validator.amount] = userInput;
-            if (validator.validate()) {
-                data.addResource(validator.title, validator.amount);
-                console.log("add");
+        return __awaiter(this, void 0, void 0, function* () {
+            event.preventDefault();
+            const userInput = this.gatherUserInput();
+            if (Array.isArray(userInput)) {
+                let validator = new validators_js_1.Post();
+                [validator.title, validator.amount] = userInput;
+                console.log(validator.title);
+                console.log(validator.amount);
+                if (yield validator.validate()) {
+                    if (data.addResource(validator.title, validator.amount))
+                        console.log("added resource");
+                }
+                this.clearInputs();
+                console.log(data.getResources);
             }
-            this.clearInputs();
-            console.log(data.getResources);
-        }
-        else {
-            console.log(userInput);
-        }
-        return userInput;
+            else {
+                console.log(userInput);
+            }
+        });
     }
     configure() {
         this.element.addEventListener("submit", this.submitHandler);
@@ -98,10 +110,15 @@ __decorate([
     autobind,
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Event]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ProjectInput.prototype, "submitHandler", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 const data = resource_js_1.ResourceStorage.getInstance();
-const prjInput = new ProjectInput();
+try {
+    const prjInput = new ProjectInput();
+}
+catch (e) {
+    console.log("no favicon");
+}
 //# sourceMappingURL=ProjectInput.js.map

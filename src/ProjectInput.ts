@@ -1,7 +1,7 @@
-
-import {Post} from './validators.js';
-import { ValidationOptions } from 'class-validator';
-import {Resource, ResourceStorage} from './resource.js'
+import { Post } from "./validators.js";
+import { ValidationOptions } from "class-validator";
+import { Resource, ResourceStorage } from "./resource.js";
+import { NOTFOUND } from "dns";
 // autobind decorator
 export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
@@ -22,8 +22,8 @@ export class ProjectInput {
   element: HTMLFormElement;
   nameInputElement: HTMLInputElement;
   amountInputElement: HTMLInputElement;
-    // peopleInputElement: HTMLInputElement;
-  
+  // peopleInputElement: HTMLInputElement;
+
   constructor() {
     // this.templateElement = document.getElementById(
     //   'project-input'
@@ -64,7 +64,7 @@ export class ProjectInput {
     //   alert("Invalid input, please try again!");
     //   return;
     // } else }
-      return [enteredName, +enteredAmount];
+    return [enteredName, +enteredAmount];
     // }
   }
 
@@ -75,25 +75,26 @@ export class ProjectInput {
   }
 
   @autobind
-  public submitHandler(event: Event) {
+  public async submitHandler(event: Event) {
     event.preventDefault();
     const userInput = this.gatherUserInput();
     if (Array.isArray(userInput)) {
       let validator = new Post();
-      [validator.title,validator.amount] = userInput;
-      if(validator.validate())
-      {
-       data.addResource(validator.title,validator.amount);
-       console.log("add");
+      [validator.title, validator.amount] = userInput;
+      console.log(validator.title);
+      console.log(validator.amount);
+      if (await validator.validate()) {
+        if(data.getResources.slice().some(function (cur) {
+          return cur.getResourceName === r.getResourceName;
+        }) as Resource[])
+        if (data.addResource(validator.title, validator.amount))
+          console.log("added resource");
       }
       this.clearInputs();
       console.log(data.getResources);
-    }
-    else
-    {
+    } else {
       console.log(userInput);
     }
-    return userInput;
   }
 
   public configure() {
@@ -103,11 +104,11 @@ export class ProjectInput {
   //   private attach() {
   //     this.hostElement.insertAdjacentElement('afterbegin', this.element);
   //   }
-  
 }
 
 // export declare var data : ResourceStorage;
 const data = ResourceStorage.getInstance();
-
+try{
 const prjInput = new ProjectInput();
-
+}
+catch (e){ console.log("no favicon");}

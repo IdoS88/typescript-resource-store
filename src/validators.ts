@@ -17,6 +17,7 @@ import {
   IsEmpty,
   IsNotEmpty,
   minLength,
+  MAX,
 } from "class-validator";
 import { ProjectInput } from "./ProjectInput.js";
 export class Post {
@@ -26,7 +27,7 @@ export class Post {
   @IsNotEmpty()
   title?: string;
 
- 
+  @Max(Number.MAX_SAFE_INTEGER)
   @Min(1)
   // @Max(10)
   @IsInt()
@@ -36,32 +37,15 @@ export class Post {
   //   for (let i of properties) {
   //       yield [i, this[i]];
   //   }
-  isValid!: boolean
   set setTitle(title: string) {
     this.title = title;
   }
   set setAmount(amount: number) {
     this.amount = amount;
   }
-  validate() {
-    // if(Array.isArray(input)){
-    //   [this.title, this.amount] = <[string,number]>input.gatherUserInput();
-    // }
-    const val = validate(this).then((errors) => {
-      // errors is an array of validation errors
-      if (errors.length > 0) {
-        console.log("validation failed. errors: ", errors);
-        console.log(typeof errors[0].constraints);
-        alertAllErrors(errors);
-        this.isValid = false;
-      }
-      else{
-        console.log("validation succeed");
-        this.isValid = true;
-      }
-    });
-    
+  async validate(): Promise<boolean> {
 
+    
     //alert function for showing errors infront
     function alertAllErrors(errors: ValidationError[]) {
       // errors is an array of validation errors
@@ -74,27 +58,30 @@ export class Post {
         }
       });
     }
-    validateOrReject(this).catch((errors) => {
-      console.log("Promise rejected (validation failed). Errors: ", errors);
-    });
-    return this.isValid;
+
+        const valErrors = await validate(this);
+        
+        if (valErrors.length > 0) {
+          console.log("validation failed. errors: ", valErrors);
+          alertAllErrors(valErrors);
+          return false;
+          // return valErrors;
+        }
+        else{
+          console.log("validation succeed");
+         return true;
+        // return valErrors;
+        }
+       
+        // return errors;
+        return false;
+      
+    
+    }
   }
 
-}
-// function alertErrorMessages(errors:ValidationError[]){
 
-// }
-// }
-// or
-// async function validateOrRejectExample(input: Post) {
-//   try {
-//     await validateOrReject(input);
-//   } catch (errors) {
-//     console.log(
-//       "Caught promise rejection (validation failed). Errors: ",
-//       errors
-//     );
-//   }
+
 
 // export interface ValidatorOptions {
 //   skipMissingProperties?: boolean;

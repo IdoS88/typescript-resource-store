@@ -9,6 +9,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectInput = exports.autobind = void 0;
 const validators_js_1 = require("./validators.js");
@@ -74,22 +83,25 @@ class ProjectInput {
         // this.peopleInputElement.value = '';
     }
     submitHandler(event) {
-        event.preventDefault();
-        const userInput = this.gatherUserInput();
-        if (Array.isArray(userInput)) {
-            let validator = new validators_js_1.Post();
-            [validator.title, validator.amount] = userInput;
-            if (validator.validate()) {
-                data.addResource(validator.title, validator.amount);
-                console.log("add");
+        return __awaiter(this, void 0, void 0, function* () {
+            event.preventDefault();
+            const userInput = this.gatherUserInput();
+            if (Array.isArray(userInput)) {
+                let validator = new validators_js_1.Post();
+                [validator.title, validator.amount] = userInput;
+                console.log(validator.title);
+                console.log(validator.amount);
+                if (yield validator.validate()) {
+                    if (data.addResource(validator.title, validator.amount))
+                        console.log("added resource");
+                }
+                this.clearInputs();
+                console.log(data.getResources);
             }
-            this.clearInputs();
-            console.log(data.getResources);
-        }
-        else {
-            console.log(userInput);
-        }
-        return userInput;
+            else {
+                console.log(userInput);
+            }
+        });
     }
     configure() {
         this.element.addEventListener("submit", this.submitHandler);
@@ -99,12 +111,17 @@ __decorate([
     autobind,
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Event]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ProjectInput.prototype, "submitHandler", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 const data = resource_js_1.ResourceStorage.getInstance();
-const prjInput = new ProjectInput();
+try {
+    const prjInput = new ProjectInput();
+}
+catch (e) {
+    console.log("no favicon");
+}
 
 },{"./resource.js":2,"./validators.js":3}],2:[function(require,module,exports){
 "use strict";
@@ -130,6 +147,7 @@ class ResourceStorage {
     constructor() {
         this.listeners = [];
         this.resources = [];
+        this.addListener(this.uniqByReduce);
     }
     static getInstance() {
         if (this.instance) {
@@ -142,19 +160,53 @@ class ResourceStorage {
         this.listeners.push(listenerFn);
     }
     addResource(title, amount) {
+        //
         const newResource = new Resource(title, amount
         // ProjectStatus.Active
         );
-        this.resources.push(newResource);
+        if (this.resources.push(newResource))
+            console.log("push");
         for (const listenerFn of this.listeners) {
-            listenerFn(this.resources.slice());
+            this[listenerFn.name](this.resources.slice());
+            console.log(listenerFn);
         }
+        return true;
     }
     get getResources() {
-        if (this.resources[0].getResourceName)
-            return this.resources[0].getResourceName;
+        if (this.resources)
+            return this.resources;
         else
             return "null";
+    }
+    set setResources(array) {
+        this.resources = array;
+    }
+    get getResourcesLength() {
+        return this.resources.length;
+    }
+    uniqByReduce(array) {
+        this.setResources = array.reduce((acc, cur) => {
+            if (!acc.includes(cur)) {
+                acc.push(cur);
+            }
+            else if (acc.slice().filter(function (r) {
+                return r.getResourceName === cur.getResourceName;
+            }).length > 1) {
+                alert(`update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`);
+                console.log(`update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`);
+                // checks wether checked resource included in the array and just update it's amount
+                const i = acc.findIndex((r) => r.getResourceName === cur.getResourceName);
+                if (cur.getResourceAmount >= acc[i].getResourceAmount) {
+                    // index must be above -1 becuase it was questioned in the last if statement
+                    acc[i] = acc.pop();
+                }
+                else {
+                    acc.pop();
+                    alert("Cannot update amount less than actual amount. for that please withdraw the amount that been taken");
+                }
+            }
+            return acc;
+        }, []);
     }
 }
 exports.ResourceStorage = ResourceStorage;
@@ -179,10 +231,24 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Post = void 0;
 const class_validator_1 = require("class-validator");
 class Post {
+    // [Symbol.iterator]: function* () {
+    //   let properties = Object.keys(this);
+    //   for (let i of properties) {
+    //       yield [i, this[i]];
+    //   }
     set setTitle(title) {
         this.title = title;
     }
@@ -190,38 +256,34 @@ class Post {
         this.amount = amount;
     }
     validate() {
-        // if(Array.isArray(input)){
-        //   [this.title, this.amount] = <[string,number]>input.gatherUserInput();
-        // }
-        const val = (0, class_validator_1.validate)(this).then((errors) => {
-            // errors is an array of validation errors
-            if (errors.length > 0) {
-                console.log("validation failed. errors: ", errors);
-                console.log(typeof errors[0].constraints);
-                alertAllErrors(errors);
-                this.isValid = false;
+        return __awaiter(this, void 0, void 0, function* () {
+            //alert function for showing errors infront
+            function alertAllErrors(errors) {
+                // errors is an array of validation errors
+                // has property object 'constraints' which has the error description messages
+                errors.forEach((element) => {
+                    if (element.constraints) {
+                        for (const value of Object.values(element.constraints)) {
+                            alert(value);
+                        }
+                    }
+                });
+            }
+            const valErrors = yield (0, class_validator_1.validate)(this);
+            if (valErrors.length > 0) {
+                console.log("validation failed. errors: ", valErrors);
+                alertAllErrors(valErrors);
+                return false;
+                // return valErrors;
             }
             else {
                 console.log("validation succeed");
-                this.isValid = true;
+                return true;
+                // return valErrors;
             }
+            // return errors;
+            return false;
         });
-        //alert function for showing errors infront
-        function alertAllErrors(errors) {
-            // errors is an array of validation errors
-            // has property object 'constraints' which has the error description messages
-            errors.forEach((element) => {
-                if (element.constraints) {
-                    for (const value of Object.values(element.constraints)) {
-                        alert(value);
-                    }
-                }
-            });
-        }
-        (0, class_validator_1.validateOrReject)(this).catch((errors) => {
-            console.log("Promise rejected (validation failed). Errors: ", errors);
-        });
-        return this.isValid;
     }
 }
 __decorate([
@@ -232,6 +294,7 @@ __decorate([
     __metadata("design:type", String)
 ], Post.prototype, "title", void 0);
 __decorate([
+    (0, class_validator_1.Max)(Number.MAX_SAFE_INTEGER),
     (0, class_validator_1.Min)(1)
     // @Max(10)
     ,
@@ -239,19 +302,6 @@ __decorate([
     __metadata("design:type", Number)
 ], Post.prototype, "amount", void 0);
 exports.Post = Post;
-// function alertErrorMessages(errors:ValidationError[]){
-// }
-// }
-// or
-// async function validateOrRejectExample(input: Post) {
-//   try {
-//     await validateOrReject(input);
-//   } catch (errors) {
-//     console.log(
-//       "Caught promise rejection (validation failed). Errors: ",
-//       errors
-//     );
-//   }
 // export interface ValidatorOptions {
 //   skipMissingProperties?: boolean;
 //   whitelist?: boolean;
