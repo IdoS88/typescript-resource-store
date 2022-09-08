@@ -83,11 +83,8 @@ export class ProjectInput {
       [validator.title, validator.amount] = userInput;
       console.log(validator.title);
       console.log(validator.amount);
-      if (await validator.validate()) {
-        if(data.getResources.slice().some(function (cur) {
-          return cur.getResourceName === r.getResourceName;
-        }) as Resource[])
-        if (data.addResource(validator.title, validator.amount))
+      if (await validator.validate()) {      
+        if (data.addResource(validator.title.trim(), validator.amount))
           console.log("added resource");
       }
       this.clearInputs();

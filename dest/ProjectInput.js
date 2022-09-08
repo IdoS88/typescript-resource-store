@@ -91,7 +91,7 @@ class ProjectInput {
                 console.log(validator.title);
                 console.log(validator.amount);
                 if (yield validator.validate()) {
-                    if (data.addResource(validator.title, validator.amount))
+                    if (data.addResource(validator.title.trim(), validator.amount))
                         console.log("added resource");
                 }
                 this.clearInputs();
