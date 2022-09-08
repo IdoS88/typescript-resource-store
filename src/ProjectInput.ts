@@ -1,7 +1,6 @@
 import { Post } from "./validators.js";
 import { ValidationOptions } from "class-validator";
 import { Resource, ResourceStorage } from "./resource.js";
-import { NOTFOUND } from "dns";
 // autobind decorator
 export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
