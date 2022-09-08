@@ -1,6 +1,7 @@
 import { Post } from "./validators.js";
 import { ValidationOptions } from "class-validator";
 import { Resource, ResourceStorage } from "./resource.js";
+import { Http2ServerRequest } from "http2";
 // autobind decorator
 export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
@@ -15,33 +16,35 @@ export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
 }
 
 // ProjectInput Class
-export class ProjectInput {
+export class ProjectInput <T extends HTMLSelectElement | HTMLInputElement>{
   //   templateElement: HTMLTemplateElement;
   hostElement: HTMLDivElement;
   element: HTMLFormElement;
-  nameInputElement: HTMLInputElement;
+  nameInputElement: T;
   amountInputElement: HTMLInputElement;
   // peopleInputElement: HTMLInputElement;
 
-  constructor() {
+  constructor(divElement:string,formElement:string, nameElement:string,amountElement:string) {
     // this.templateElement = document.getElementById(
     //   'project-input'
     // )! as HTMLTemplateElement;
-    this.hostElement = document.getElementById("status")! as HTMLDivElement;
+    this.hostElement = document.getElementById(divElement)! as HTMLDivElement;
 
     // const importedNode = document.importNode(
     //   this.templateElement.content,
     //   true
     // );
-    this.element = document.querySelector("#formInsert") as HTMLFormElement;
+    this.element = document.querySelector(`#${formElement}`) as HTMLFormElement;
+    //"#formInsert"
     // this.element.id = 'user-input';
     if (this.element == null) console.log("null element");
-    this.nameInputElement = this.element?.querySelector(
-      "#type"
-    ) as HTMLInputElement;
+    this.nameInputElement = this.element.getElementById(`#${nameElement}`
+      //"#type"
+    );
     if (this.nameInputElement == null) console.log("null element");
     this.amountInputElement = this.element.querySelector(
-      "#amountInsertion"
+      `#${amountElement}`
+     // "#amountInsertion"
     ) as HTMLInputElement;
     // this.peopleInputElement = this.element.querySelector(
     //   '#people'
@@ -74,7 +77,7 @@ export class ProjectInput {
   }
 
   @autobind
-  public async submitHandler(event: Event) {
+  public async submitHandlerInsertion(event: Event) {
     event.preventDefault();
     const userInput = this.gatherUserInput();
     if (Array.isArray(userInput)) {
@@ -92,9 +95,27 @@ export class ProjectInput {
       console.log(userInput);
     }
   }
+  @autobind
+  public async submitHandlerBorrow(event: Event) {
+    event.preventDefault();
+    const userInput = this.gatherUserInput();
+    if (Array.isArray(userInput)) {
+      let validator = new Post();
+      [validator.title, validator.amount] = userInput;
+      console.log(validator.title);
+      console.log(validator.amount);
+      if (await validator.validate()) {      
+   
+    }
+  }
 
   public configure() {
-    this.element.addEventListener("submit", this.submitHandler);
+    if(this.nameInputElement instanceof HTMLInputElement){
+    this.element.addEventListener("submit", this.submitHandlerInsertion);
+    }
+    else{
+    this.element.addEventListener("submit", this.submitHandlerBorrow);
+    }
   }
 
   //   private attach() {
