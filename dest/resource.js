@@ -59,7 +59,8 @@ class ResourceStorage {
                 return r.getResourceName === title;
             })) {
             // update item
-            this.UpdateExistingItem = nr;
+            this.UpdateExistingItemOrBorrowItem = nr;
+            return false;
         }
         else if (this.resources.push(nr)) {
             console.log("push new item");
@@ -115,7 +116,7 @@ class ResourceStorage {
     //     return acc;
     //   }, []);
     // }
-    set UpdateExistingItem(r) {
+    set UpdateExistingItemOrBorrowItem(r) {
         //a function to update existing item amount
         const i = this.resources.findIndex((checked) => checked.getResourceName === r.getResourceName);
         // find existing item to be able to update
@@ -124,15 +125,22 @@ class ResourceStorage {
             const previousAmount = this.getResources[i].getResourceAmount;
             try {
                 const sum = r.getResourceAmount + previousAmount;
-                if (sum >= Number.MAX_SAFE_INTEGER) {
-                    throw new Error("Update failed: updated amount is not in range (1 - " + Number.MAX_SAFE_INTEGER + ")");
+                if (sum < 0) {
+                    alert("Cannot take more than " + previousAmount + " from this resource");
+                    console.log("Cannot take more than " + previousAmount + " from this resource");
+                    return;
                 }
                 alert(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
                 console.log(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
             }
             catch (err) {
                 // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
-                console.log("updated amount is not in range (1 - " + Number.MAX_SAFE_INTEGER + ")");
+                alert("Update failed: updated amount is not in range (1 - " +
+                    Number.MAX_SAFE_INTEGER +
+                    ")");
+                console.log("Update failed: updated amount is not in range (1 - " +
+                    Number.MAX_SAFE_INTEGER +
+                    ")");
                 console.log(err);
                 return;
             }

@@ -19,7 +19,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PostInsertion = exports.Post = void 0;
+exports.Post = void 0;
 const class_validator_1 = require("class-validator");
 class Post {
     // [Symbol.iterator]: function* () {
@@ -65,6 +65,13 @@ class Post {
     }
 }
 __decorate([
+    (0, class_validator_1.MinLength)(2),
+    (0, class_validator_1.MaxLength)(15),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], Post.prototype, "title", void 0);
+__decorate([
     (0, class_validator_1.Max)(Number.MAX_SAFE_INTEGER),
     (0, class_validator_1.Min)(1)
     // @Max(10)
@@ -73,28 +80,6 @@ __decorate([
     __metadata("design:type", Number)
 ], Post.prototype, "amount", void 0);
 exports.Post = Post;
-class PostInsertion extends Post {
-}
-__decorate([
-    (0, class_validator_1.MinLength)(2),
-    (0, class_validator_1.MaxLength)(15),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], PostInsertion.prototype, "title", void 0);
-exports.PostInsertion = PostInsertion;
-// export interface ValidatorOptions {
-//   skipMissingProperties?: boolean;
-//   whitelist?: boolean;
-//   forbidNonWhitelisted?: boolean;
-//   groups?: string[];
-//   dismissDefaultMessages?: boolean;
-//   validationError?: {
-//     target?: boolean;
-//     value?: boolean;
-//   };
-//   forbidUnknownValues?: boolean;
-//   stopAtFirstError?: boolean;
 
 },{"class-validator":111}],2:[function(require,module,exports){
 "use strict";

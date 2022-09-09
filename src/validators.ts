@@ -22,6 +22,10 @@ import {
 } from "class-validator";
 import { ProjectInput } from "./ProjectInput.js";
 export class Post {
+  @MinLength(2)
+  @MaxLength(15)
+  @IsString()
+  @IsNotEmpty()
   title?: string;
 
   @Max(Number.MAX_SAFE_INTEGER)
@@ -72,10 +76,3 @@ export class Post {
   }
 }
 
-export class PostInsertion extends Post {
-  @MinLength(2)
-  @MaxLength(15)
-  @IsString()
-  @IsNotEmpty()
-  title!: string;
-}

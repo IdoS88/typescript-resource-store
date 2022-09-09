@@ -34,6 +34,11 @@ function autobind(_, _2, descriptor) {
     return adjDescriptor;
 }
 exports.autobind = autobind;
+var InputType;
+(function (InputType) {
+    InputType["Insert"] = "insert";
+    InputType["Borrow"] = "borrow";
+})(InputType || (InputType = {}));
 // ProjectInput Class
 class ProjectInput {
     // peopleInputElement: HTMLInputElement;
@@ -85,7 +90,7 @@ class ProjectInput {
         this.amountInputElement.value = "";
         // this.peopleInputElement.value = '';
     }
-    submitHandlerInsertion(event) {
+    submitHandler(event) {
         return __awaiter(this, void 0, void 0, function* () {
             event.preventDefault();
             const userInput = this.gatherUserInput();
@@ -95,8 +100,24 @@ class ProjectInput {
                 console.log(validator.title);
                 console.log(validator.amount);
                 if (yield validator.validate()) {
-                    if (data.addResource(validator.title.trim(), validator.amount))
-                        console.log("added resource");
+                    // first validate the input
+                    if (this.nameInputElement instanceof HTMLInputElement) {
+                        console.log("input name");
+                        // in case of inserting a new resource or existing resource
+                        if (data.addResource(validator.title.trim(), validator.amount)) {
+                            this.addOptionBorrow(validator.title); // adds option to the borrow select options
+                        }
+                    }
+                    else {
+                        // in case of borrowing a resource
+                        console.log("select input");
+                        data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title, -Math.abs(validator.amount)
+                        // makes negative to reduce resource amount
+                        );
+                        console.log("borrow resource");
+                        this.amountHandler();
+                        //remove empty resources
+                    }
                 }
                 this.clearInputs();
                 console.log(data.getResources);
@@ -106,26 +127,34 @@ class ProjectInput {
             }
         });
     }
-    submitHandlerBorrow(event) {
-        return __awaiter(this, void 0, void 0, function* () {
-            event.preventDefault();
-            const userInput = this.gatherUserInput();
-            if (Array.isArray(userInput)) {
-                let validator = new validators_js_1.Post();
-                [validator.title, validator.amount] = userInput;
-                console.log(validator.title);
-                console.log(validator.amount);
-                if (yield validator.validate()) {
-                }
-            }
-        });
-    }
     configure() {
-        if (this.nameInputElement instanceof HTMLInputElement) {
-            this.element.addEventListener("submit", this.submitHandlerInsertion);
-        }
-        else {
-            this.element.addEventListener("submit", this.submitHandlerBorrow);
+        this.element.addEventListener("submit", this.submitHandler);
+    }
+    //   private attach() {
+    //     this.hostElement.insertAdjacentElement('afterbegin', this.element);
+    //   }
+    addOptionBorrow(title) {
+        // a function for first form for adding a new item to select list of the second form
+        let select = document.getElementById("list");
+        let newOption = document.createElement("option");
+        newOption.value = title;
+        newOption.id = title;
+        newOption.innerHTML = title;
+        select.appendChild(newOption);
+    }
+    amountHandler() {
+        // a function to remove empty resurces from relevant list and storage.
+        let select = document.getElementById("list");
+        if (data.getResources) {
+            data.getResources.forEach((r) => {
+                var _a;
+                let node = document.getElementById(r.getResourceName);
+                if (r.getResourceAmount === 0) {
+                    select.removeChild(node);
+                    (_a = data.getResources) === null || _a === void 0 ? void 0 : _a.splice(data.getResources.indexOf(r), 1);
+                    // remove the option of empty resource from options list and from the resource storage array
+                }
+            });
         }
     }
 }
@@ -134,18 +163,13 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Event]),
     __metadata("design:returntype", Promise)
-], ProjectInput.prototype, "submitHandlerInsertion", null);
-__decorate([
-    autobind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Event]),
-    __metadata("design:returntype", Promise)
-], ProjectInput.prototype, "submitHandlerBorrow", null);
+], ProjectInput.prototype, "submitHandler", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 const data = resource_js_1.ResourceStorage.getInstance();
 try {
-    const prjInput = new ProjectInput("status", "formInsert", "type", "amountInsertion");
+    const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
+    const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
 }
 catch (e) {
     console.log("no favicon");

@@ -1,5 +1,5 @@
 import { IsInt, validate } from "class-validator";
-import { Post, PostInsertion } from "./validators";
+import { Post } from "./validators";
 
 // Project State Management
 type Listener = (items: Resource[]) => void;
@@ -128,13 +128,14 @@ export class ResourceStorage {
       try {
         const sum = r.getResourceAmount + previousAmount;
 
-        if (sum < 1) {
+        if (sum < 0) {
           alert(
             "Cannot take more than " + previousAmount + " from this resource"
           );
-          throw new Error(
+          console.log(
             "Cannot take more than " + previousAmount + " from this resource"
           );
+          return;
         }
 
         alert(
@@ -145,6 +146,7 @@ export class ResourceStorage {
         );
       } catch (err) {
         // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
+
         alert(
           "Update failed: updated amount is not in range (1 - " +
             Number.MAX_SAFE_INTEGER +

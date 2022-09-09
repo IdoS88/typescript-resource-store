@@ -35,6 +35,11 @@ function autobind(_, _2, descriptor) {
     return adjDescriptor;
 }
 exports.autobind = autobind;
+var InputType;
+(function (InputType) {
+    InputType["Insert"] = "insert";
+    InputType["Borrow"] = "borrow";
+})(InputType || (InputType = {}));
 // ProjectInput Class
 class ProjectInput {
     // peopleInputElement: HTMLInputElement;
@@ -86,7 +91,7 @@ class ProjectInput {
         this.amountInputElement.value = "";
         // this.peopleInputElement.value = '';
     }
-    submitHandlerInsertion(event) {
+    submitHandler(event) {
         return __awaiter(this, void 0, void 0, function* () {
             event.preventDefault();
             const userInput = this.gatherUserInput();
@@ -96,8 +101,24 @@ class ProjectInput {
                 console.log(validator.title);
                 console.log(validator.amount);
                 if (yield validator.validate()) {
-                    if (data.addResource(validator.title.trim(), validator.amount))
-                        console.log("added resource");
+                    // first validate the input
+                    if (this.nameInputElement instanceof HTMLInputElement) {
+                        console.log("input name");
+                        // in case of inserting a new resource or existing resource
+                        if (data.addResource(validator.title.trim(), validator.amount)) {
+                            this.addOptionBorrow(validator.title); // adds option to the borrow select options
+                        }
+                    }
+                    else {
+                        // in case of borrowing a resource
+                        console.log("select input");
+                        data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title, -Math.abs(validator.amount)
+                        // makes negative to reduce resource amount
+                        );
+                        console.log("borrow resource");
+                        this.amountHandler();
+                        //remove empty resources
+                    }
                 }
                 this.clearInputs();
                 console.log(data.getResources);
@@ -107,26 +128,33 @@ class ProjectInput {
             }
         });
     }
-    submitHandlerBorrow(event) {
-        return __awaiter(this, void 0, void 0, function* () {
-            event.preventDefault();
-            const userInput = this.gatherUserInput();
-            if (Array.isArray(userInput)) {
-                let validator = new validators_js_1.Post();
-                [validator.title, validator.amount] = userInput;
-                console.log(validator.title);
-                console.log(validator.amount);
-                if (yield validator.validate()) {
-                }
-            }
-        });
-    }
     configure() {
-        if (this.nameInputElement instanceof HTMLInputElement) {
-            this.element.addEventListener("submit", this.submitHandlerInsertion);
-        }
-        else {
-            this.element.addEventListener("submit", this.submitHandlerBorrow);
+        this.element.addEventListener("submit", this.submitHandler);
+    }
+    //   private attach() {
+    //     this.hostElement.insertAdjacentElement('afterbegin', this.element);
+    //   }
+    addOptionBorrow(title) {
+        // a function for first form for adding a new item to select list of the second form
+        let select = document.getElementById("list");
+        let newOption = document.createElement("option");
+        newOption.value = title;
+        newOption.innerHTML = title;
+        select.appendChild(newOption);
+    }
+    amountHandler() {
+        // a function to remove empty resurces from relevant list and storage.
+        let select = document.getElementById("list");
+        if (data.getResources) {
+            data.getResources.forEach((r) => {
+                var _a;
+                let node = document.getElementById(`#${r.getResourceName}`);
+                if (r.getResourceAmount === 0) {
+                    select.removeChild(node);
+                    (_a = data.getResources) === null || _a === void 0 ? void 0 : _a.splice(data.getResources.indexOf(r), 1);
+                    // remove the option of empty resource from options list and from the resource storage array
+                }
+            });
         }
     }
 }
@@ -135,18 +163,13 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Event]),
     __metadata("design:returntype", Promise)
-], ProjectInput.prototype, "submitHandlerInsertion", null);
-__decorate([
-    autobind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Event]),
-    __metadata("design:returntype", Promise)
-], ProjectInput.prototype, "submitHandlerBorrow", null);
+], ProjectInput.prototype, "submitHandler", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 const data = resource_js_1.ResourceStorage.getInstance();
 try {
-    const prjInput = new ProjectInput("status", "formInsert", "type", "amountInsertion");
+    const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
+    const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
 }
 catch (e) {
     console.log("no favicon");
@@ -215,7 +238,8 @@ class ResourceStorage {
                 return r.getResourceName === title;
             })) {
             // update item
-            this.UpdateExistingItem = nr;
+            this.UpdateExistingItemOrBorrowItem = nr;
+            return false;
         }
         else if (this.resources.push(nr)) {
             console.log("push new item");
@@ -271,7 +295,7 @@ class ResourceStorage {
     //     return acc;
     //   }, []);
     // }
-    set UpdateExistingItem(r) {
+    set UpdateExistingItemOrBorrowItem(r) {
         //a function to update existing item amount
         const i = this.resources.findIndex((checked) => checked.getResourceName === r.getResourceName);
         // find existing item to be able to update
@@ -280,15 +304,22 @@ class ResourceStorage {
             const previousAmount = this.getResources[i].getResourceAmount;
             try {
                 const sum = r.getResourceAmount + previousAmount;
-                if (sum >= Number.MAX_SAFE_INTEGER) {
-                    throw new Error("Update failed: updated amount is not in range (1 - " + Number.MAX_SAFE_INTEGER + ")");
+                if (sum < 0) {
+                    alert("Cannot take more than " + previousAmount + " from this resource");
+                    console.log("Cannot take more than " + previousAmount + " from this resource");
+                    return;
                 }
                 alert(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
                 console.log(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
             }
             catch (err) {
                 // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
-                console.log("updated amount is not in range (1 - " + Number.MAX_SAFE_INTEGER + ")");
+                alert("Update failed: updated amount is not in range (1 - " +
+                    Number.MAX_SAFE_INTEGER +
+                    ")");
+                console.log("Update failed: updated amount is not in range (1 - " +
+                    Number.MAX_SAFE_INTEGER +
+                    ")");
                 console.log(err);
                 return;
             }
@@ -332,7 +363,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PostInsertion = exports.Post = void 0;
+exports.Post = void 0;
 const class_validator_1 = require("class-validator");
 class Post {
     // [Symbol.iterator]: function* () {
@@ -378,6 +409,13 @@ class Post {
     }
 }
 __decorate([
+    (0, class_validator_1.MinLength)(2),
+    (0, class_validator_1.MaxLength)(15),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], Post.prototype, "title", void 0);
+__decorate([
     (0, class_validator_1.Max)(Number.MAX_SAFE_INTEGER),
     (0, class_validator_1.Min)(1)
     // @Max(10)
@@ -386,28 +424,6 @@ __decorate([
     __metadata("design:type", Number)
 ], Post.prototype, "amount", void 0);
 exports.Post = Post;
-class PostInsertion extends Post {
-}
-__decorate([
-    (0, class_validator_1.MinLength)(2),
-    (0, class_validator_1.MaxLength)(15),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], PostInsertion.prototype, "title", void 0);
-exports.PostInsertion = PostInsertion;
-// export interface ValidatorOptions {
-//   skipMissingProperties?: boolean;
-//   whitelist?: boolean;
-//   forbidNonWhitelisted?: boolean;
-//   groups?: string[];
-//   dismissDefaultMessages?: boolean;
-//   validationError?: {
-//     target?: boolean;
-//     value?: boolean;
-//   };
-//   forbidUnknownValues?: boolean;
-//   stopAtFirstError?: boolean;
 
 },{"class-validator":113}],4:[function(require,module,exports){
 "use strict";
@@ -17307,3 +17323,4 @@ function toString(input) {
 module.exports = exports.default;
 module.exports.default = exports.default;
 },{}]},{},[1]);
+

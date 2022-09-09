@@ -1,4 +1,4 @@
-import { Post, PostInsertion } from "./validators.js";
+import { Post } from "./validators.js";
 import { ValidationOptions } from "class-validator";
 import { Resource, ResourceStorage } from "./resource.js";
 import { Http2ServerRequest } from "http2";
@@ -32,7 +32,7 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
     divElement: string,
     formElement: string,
     nameElement: string,
-    amountElement: string,
+    amountElement: string
   ) {
     // this.templateElement = document.getElementById(
     //   'project-input'
@@ -95,17 +95,25 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
       console.log(validator.title);
       console.log(validator.amount);
       if (await validator.validate()) {
+        // first validate the input
         if (this.nameInputElement instanceof HTMLInputElement) {
+          console.log("input name")
           // in case of inserting a new resource or existing resource
-          if (data.addResource(validator.title.trim(), validator.amount))
-            console.log("added resource");
+          if (data.addResource(validator.title.trim(), validator.amount)) {
+            this.addOptionBorrow(validator.title); // adds option to the borrow select options
+          }
         } else {
           // in case of borrowing a resource
+          console.log("select input")
           data.UpdateExistingItemOrBorrowItem = new Resource(
             validator.title,
-            validator.amount
+            -Math.abs(validator.amount)
+            // makes negative to reduce resource amount
           );
           console.log("borrow resource");
+
+          this.amountHandler();
+          //remove empty resources
         }
       }
       this.clearInputs();
@@ -122,16 +130,47 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
   //   private attach() {
   //     this.hostElement.insertAdjacentElement('afterbegin', this.element);
   //   }
+  public addOptionBorrow(title: string) {
+    // a function for first form for adding a new item to select list of the second form
+
+    let select = document.getElementById("list")!;
+    let newOption = document.createElement("option");
+    newOption.value = title;
+    newOption.id = title;
+    newOption.innerHTML = title;
+    select.appendChild(newOption);
+  }
+
+  public amountHandler() {
+    // a function to remove empty resurces from relevant list and storage.
+    let select = document.getElementById("list")!;
+    if (data.getResources) {
+      data.getResources.forEach((r) => {
+        let node = document.getElementById(r.getResourceName)!;
+        if (r.getResourceAmount === 0) {
+          select.removeChild(node);
+          data.getResources?.splice(data.getResources.indexOf(r), 1);
+          // remove the option of empty resource from options list and from the resource storage array
+        }
+      });
+    }
+  }
 }
 
 // export declare var data : ResourceStorage;
 const data = ResourceStorage.getInstance();
 try {
-  const prjInput = new ProjectInput(
+  const prjInputInsert = new ProjectInput<HTMLInputElement>(
     "status",
     "formInsert",
     "type",
-    "amountInsertion",
+    "amountInsertion"
+  );
+  const prjInputBorrow = new ProjectInput<HTMLSelectElement>(
+    "status",
+    "formBorrow",
+    "list",
+    "amountBorrow"
   );
 } catch (e) {
   console.log("no favicon");
