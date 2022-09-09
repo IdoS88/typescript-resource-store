@@ -1,4 +1,4 @@
-import { Post } from "./validators.js";
+import { Post, PostInsertion } from "./validators.js";
 import { ValidationOptions } from "class-validator";
 import { Resource, ResourceStorage } from "./resource.js";
 import { Http2ServerRequest } from "http2";
@@ -14,9 +14,13 @@ export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   };
   return adjDescriptor;
 }
+enum InputType {
+  Insert = "insert",
+  Borrow = "borrow",
+}
 
 // ProjectInput Class
-export class ProjectInput <T extends HTMLSelectElement | HTMLInputElement>{
+export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
   //   templateElement: HTMLTemplateElement;
   hostElement: HTMLDivElement;
   element: HTMLFormElement;
@@ -24,12 +28,16 @@ export class ProjectInput <T extends HTMLSelectElement | HTMLInputElement>{
   amountInputElement: HTMLInputElement;
   // peopleInputElement: HTMLInputElement;
 
-  constructor(divElement:string,formElement:string, nameElement:string,amountElement:string) {
+  constructor(
+    divElement: string,
+    formElement: string,
+    nameElement: string,
+    amountElement: string,
+  ) {
     // this.templateElement = document.getElementById(
     //   'project-input'
     // )! as HTMLTemplateElement;
     this.hostElement = document.getElementById(divElement)! as HTMLDivElement;
-
     // const importedNode = document.importNode(
     //   this.templateElement.content,
     //   true
@@ -38,13 +46,14 @@ export class ProjectInput <T extends HTMLSelectElement | HTMLInputElement>{
     //"#formInsert"
     // this.element.id = 'user-input';
     if (this.element == null) console.log("null element");
-    this.nameInputElement = this.element.getElementById(`#${nameElement}`
+    this.nameInputElement = this.element.querySelector(
+      `#${nameElement}`
       //"#type"
-    );
+    ) as T;
     if (this.nameInputElement == null) console.log("null element");
     this.amountInputElement = this.element.querySelector(
       `#${amountElement}`
-     // "#amountInsertion"
+      // "#amountInsertion"
     ) as HTMLInputElement;
     // this.peopleInputElement = this.element.querySelector(
     //   '#people'
@@ -77,7 +86,7 @@ export class ProjectInput <T extends HTMLSelectElement | HTMLInputElement>{
   }
 
   @autobind
-  public async submitHandlerInsertion(event: Event) {
+  public async submitHandler(event: Event) {
     event.preventDefault();
     const userInput = this.gatherUserInput();
     if (Array.isArray(userInput)) {
@@ -85,9 +94,19 @@ export class ProjectInput <T extends HTMLSelectElement | HTMLInputElement>{
       [validator.title, validator.amount] = userInput;
       console.log(validator.title);
       console.log(validator.amount);
-      if (await validator.validate()) {      
-        if (data.addResource(validator.title.trim(), validator.amount))
-          console.log("added resource");
+      if (await validator.validate()) {
+        if (this.nameInputElement instanceof HTMLInputElement) {
+          // in case of inserting a new resource or existing resource
+          if (data.addResource(validator.title.trim(), validator.amount))
+            console.log("added resource");
+        } else {
+          // in case of borrowing a resource
+          data.UpdateExistingItemOrBorrowItem = new Resource(
+            validator.title,
+            validator.amount
+          );
+          console.log("borrow resource");
+        }
       }
       this.clearInputs();
       console.log(data.getResources);
@@ -95,27 +114,9 @@ export class ProjectInput <T extends HTMLSelectElement | HTMLInputElement>{
       console.log(userInput);
     }
   }
-  @autobind
-  public async submitHandlerBorrow(event: Event) {
-    event.preventDefault();
-    const userInput = this.gatherUserInput();
-    if (Array.isArray(userInput)) {
-      let validator = new Post();
-      [validator.title, validator.amount] = userInput;
-      console.log(validator.title);
-      console.log(validator.amount);
-      if (await validator.validate()) {      
-   
-    }
-  }
 
   public configure() {
-    if(this.nameInputElement instanceof HTMLInputElement){
-    this.element.addEventListener("submit", this.submitHandlerInsertion);
-    }
-    else{
-    this.element.addEventListener("submit", this.submitHandlerBorrow);
-    }
+    this.element.addEventListener("submit", this.submitHandler);
   }
 
   //   private attach() {
@@ -125,7 +126,14 @@ export class ProjectInput <T extends HTMLSelectElement | HTMLInputElement>{
 
 // export declare var data : ResourceStorage;
 const data = ResourceStorage.getInstance();
-try{
-const prjInput = new ProjectInput();
+try {
+  const prjInput = new ProjectInput(
+    "status",
+    "formInsert",
+    "type",
+    "amountInsertion",
+  );
+} catch (e) {
+  console.log("no favicon");
+  console.log(e);
 }
-catch (e){ console.log("no favicon");}

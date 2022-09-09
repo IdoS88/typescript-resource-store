@@ -38,24 +38,28 @@ exports.autobind = autobind;
 // ProjectInput Class
 class ProjectInput {
     // peopleInputElement: HTMLInputElement;
-    constructor() {
-        var _a;
+    constructor(divElement, formElement, nameElement, amountElement) {
         // this.templateElement = document.getElementById(
         //   'project-input'
         // )! as HTMLTemplateElement;
-        this.hostElement = document.getElementById("status");
+        this.hostElement = document.getElementById(divElement);
         // const importedNode = document.importNode(
         //   this.templateElement.content,
         //   true
         // );
-        this.element = document.querySelector("#formInsert");
+        this.element = document.querySelector(`#${formElement}`);
+        //"#formInsert"
         // this.element.id = 'user-input';
         if (this.element == null)
             console.log("null element");
-        this.nameInputElement = (_a = this.element) === null || _a === void 0 ? void 0 : _a.querySelector("#type");
+        this.nameInputElement = this.element.querySelector(`#${nameElement}`
+        //"#type"
+        );
         if (this.nameInputElement == null)
             console.log("null element");
-        this.amountInputElement = this.element.querySelector("#amountInsertion");
+        this.amountInputElement = this.element.querySelector(`#${amountElement}`
+        // "#amountInsertion"
+        );
         // this.peopleInputElement = this.element.querySelector(
         //   '#people'
         // ) as HTMLInputElement;
@@ -82,7 +86,7 @@ class ProjectInput {
         this.amountInputElement.value = "";
         // this.peopleInputElement.value = '';
     }
-    submitHandler(event) {
+    submitHandlerInsertion(event) {
         return __awaiter(this, void 0, void 0, function* () {
             event.preventDefault();
             const userInput = this.gatherUserInput();
@@ -103,8 +107,27 @@ class ProjectInput {
             }
         });
     }
+    submitHandlerBorrow(event) {
+        return __awaiter(this, void 0, void 0, function* () {
+            event.preventDefault();
+            const userInput = this.gatherUserInput();
+            if (Array.isArray(userInput)) {
+                let validator = new validators_js_1.Post();
+                [validator.title, validator.amount] = userInput;
+                console.log(validator.title);
+                console.log(validator.amount);
+                if (yield validator.validate()) {
+                }
+            }
+        });
+    }
     configure() {
-        this.element.addEventListener("submit", this.submitHandler);
+        if (this.nameInputElement instanceof HTMLInputElement) {
+            this.element.addEventListener("submit", this.submitHandlerInsertion);
+        }
+        else {
+            this.element.addEventListener("submit", this.submitHandlerBorrow);
+        }
     }
 }
 __decorate([
@@ -112,15 +135,22 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Event]),
     __metadata("design:returntype", Promise)
-], ProjectInput.prototype, "submitHandler", null);
+], ProjectInput.prototype, "submitHandlerInsertion", null);
+__decorate([
+    autobind,
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Event]),
+    __metadata("design:returntype", Promise)
+], ProjectInput.prototype, "submitHandlerBorrow", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 const data = resource_js_1.ResourceStorage.getInstance();
 try {
-    const prjInput = new ProjectInput();
+    const prjInput = new ProjectInput("status", "formInsert", "type", "amountInsertion");
 }
 catch (e) {
     console.log("no favicon");
+    console.log(e);
 }
 
 },{"./resource.js":2,"./validators.js":3}],2:[function(require,module,exports){
@@ -248,14 +278,25 @@ class ResourceStorage {
         if (Array.isArray(this.getResources)) {
             // stores previous amount to add new amount and for log porpouses
             const previousAmount = this.getResources[i].getResourceAmount;
-            const sum = r.getResourceAmount + previousAmount;
-            alert(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
-            console.log(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
+            try {
+                const sum = r.getResourceAmount + previousAmount;
+                if (sum >= Number.MAX_SAFE_INTEGER) {
+                    throw new Error("Update failed: updated amount is not in range (1 - " + Number.MAX_SAFE_INTEGER + ")");
+                }
+                alert(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
+                console.log(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
+            }
+            catch (err) {
+                // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
+                console.log("updated amount is not in range (1 - " + Number.MAX_SAFE_INTEGER + ")");
+                console.log(err);
+                return;
+            }
             this.getResources[i].updateResourceAmount = r.getResourceAmount;
             return;
         }
         else {
-            throw new Error("Update failed");
+            throw new Error("Update failed: there isn't any item in the storage");
         }
     }
 }
@@ -291,7 +332,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Post = void 0;
+exports.PostInsertion = exports.Post = void 0;
 const class_validator_1 = require("class-validator");
 class Post {
     // [Symbol.iterator]: function* () {
@@ -337,13 +378,6 @@ class Post {
     }
 }
 __decorate([
-    (0, class_validator_1.MinLength)(2),
-    (0, class_validator_1.MaxLength)(15),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], Post.prototype, "title", void 0);
-__decorate([
     (0, class_validator_1.Max)(Number.MAX_SAFE_INTEGER),
     (0, class_validator_1.Min)(1)
     // @Max(10)
@@ -352,6 +386,16 @@ __decorate([
     __metadata("design:type", Number)
 ], Post.prototype, "amount", void 0);
 exports.Post = Post;
+class PostInsertion extends Post {
+}
+__decorate([
+    (0, class_validator_1.MinLength)(2),
+    (0, class_validator_1.MaxLength)(15),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], PostInsertion.prototype, "title", void 0);
+exports.PostInsertion = PostInsertion;
 // export interface ValidatorOptions {
 //   skipMissingProperties?: boolean;
 //   whitelist?: boolean;

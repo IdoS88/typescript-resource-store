@@ -18,13 +18,10 @@ import {
   IsNotEmpty,
   minLength,
   MAX,
+  ValidatorOptions
 } from "class-validator";
 import { ProjectInput } from "./ProjectInput.js";
 export class Post {
-  @MinLength(2)
-  @MaxLength(15)
-  @IsString()
-  @IsNotEmpty()
   title?: string;
 
   @Max(Number.MAX_SAFE_INTEGER)
@@ -43,9 +40,7 @@ export class Post {
   set setAmount(amount: number) {
     this.amount = amount;
   }
-  async validate(): Promise<boolean> {
-
-    
+  public async validate(): Promise<boolean> {
     //alert function for showing errors infront
     function alertAllErrors(errors: ValidationError[]) {
       // errors is an array of validation errors
@@ -59,40 +54,28 @@ export class Post {
       });
     }
 
-        const valErrors = await validate(this);
-        
-        if (valErrors.length > 0) {
-          console.log("validation failed. errors: ", valErrors);
-          alertAllErrors(valErrors);
-          return false;
-          // return valErrors;
-        }
-        else{
-          console.log("validation succeed");
-         return true;
-        // return valErrors;
-        }
-       
-        // return errors;
-        return false;
-      
-    
+    const valErrors = await validate(this);
+
+    if (valErrors.length > 0) {
+      console.log("validation failed. errors: ", valErrors);
+      alertAllErrors(valErrors);
+      return false;
+      // return valErrors;
+    } else {
+      console.log("validation succeed");
+      return true;
+      // return valErrors;
     }
+
+    // return errors;
+    return false;
   }
+}
 
-
-
-
-// export interface ValidatorOptions {
-//   skipMissingProperties?: boolean;
-//   whitelist?: boolean;
-//   forbidNonWhitelisted?: boolean;
-//   groups?: string[];
-//   dismissDefaultMessages?: boolean;
-//   validationError?: {
-//     target?: boolean;
-//     value?: boolean;
-//   };
-
-//   forbidUnknownValues?: boolean;
-//   stopAtFirstError?: boolean;
+export class PostInsertion extends Post {
+  @MinLength(2)
+  @MaxLength(15)
+  @IsString()
+  @IsNotEmpty()
+  title!: string;
+}

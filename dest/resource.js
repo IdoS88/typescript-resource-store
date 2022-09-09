@@ -122,14 +122,25 @@ class ResourceStorage {
         if (Array.isArray(this.getResources)) {
             // stores previous amount to add new amount and for log porpouses
             const previousAmount = this.getResources[i].getResourceAmount;
-            const sum = r.getResourceAmount + previousAmount;
-            alert(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
-            console.log(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
+            try {
+                const sum = r.getResourceAmount + previousAmount;
+                if (sum >= Number.MAX_SAFE_INTEGER) {
+                    throw new Error("Update failed: updated amount is not in range (1 - " + Number.MAX_SAFE_INTEGER + ")");
+                }
+                alert(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
+                console.log(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
+            }
+            catch (err) {
+                // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
+                console.log("updated amount is not in range (1 - " + Number.MAX_SAFE_INTEGER + ")");
+                console.log(err);
+                return;
+            }
             this.getResources[i].updateResourceAmount = r.getResourceAmount;
             return;
         }
         else {
-            throw new Error("Update failed");
+            throw new Error("Update failed: there isn't any item in the storage");
         }
     }
 }

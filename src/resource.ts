@@ -1,4 +1,5 @@
-import { IsInt } from "class-validator";
+import { IsInt, validate } from "class-validator";
+import { Post, PostInsertion } from "./validators";
 
 // Project State Management
 type Listener = (items: Resource[]) => void;
@@ -59,7 +60,8 @@ export class ResourceStorage {
       })
     ) {
       // update item
-      this.UpdateExistingItem = nr;
+      this.UpdateExistingItemOrBorrowItem = nr;
+      return false;
     } else if (this.resources.push(nr)) {
       console.log("push new item");
       // add a new item to resources array
@@ -113,7 +115,7 @@ export class ResourceStorage {
   //     return acc;
   //   }, []);
   // }
-  set UpdateExistingItem(r: Resource) {
+  set UpdateExistingItemOrBorrowItem(r: Resource) {
     //a function to update existing item amount
     const i = this.resources.findIndex(
       (checked) => checked.getResourceName === r.getResourceName
@@ -123,19 +125,43 @@ export class ResourceStorage {
     if (Array.isArray(this.getResources)) {
       // stores previous amount to add new amount and for log porpouses
       const previousAmount = this.getResources[i].getResourceAmount;
-      const sum = r.getResourceAmount + previousAmount;
+      try {
+        const sum = r.getResourceAmount + previousAmount;
 
-      alert(
-        `update given resource: ${r.getResourceName} with given amount: ${sum}`
-      );
-      console.log(
-        `update given resource: ${r.getResourceName} with given amount: ${sum}`
-      );
+        if (sum < 1) {
+          alert(
+            "Cannot take more than " + previousAmount + " from this resource"
+          );
+          throw new Error(
+            "Cannot take more than " + previousAmount + " from this resource"
+          );
+        }
 
+        alert(
+          `update given resource: ${r.getResourceName} with given amount: ${sum}`
+        );
+        console.log(
+          `update given resource: ${r.getResourceName} with given amount: ${sum}`
+        );
+      } catch (err) {
+        // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
+        alert(
+          "Update failed: updated amount is not in range (1 - " +
+            Number.MAX_SAFE_INTEGER +
+            ")"
+        );
+        console.log(
+          "Update failed: updated amount is not in range (1 - " +
+            Number.MAX_SAFE_INTEGER +
+            ")"
+        );
+        console.log(err);
+        return;
+      }
       this.getResources[i].updateResourceAmount = r.getResourceAmount;
       return;
     } else {
-      throw new Error("Update failed");
+      throw new Error("Update failed: there isn't any item in the storage");
     }
   }
 }

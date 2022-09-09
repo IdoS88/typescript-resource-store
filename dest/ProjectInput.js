@@ -37,24 +37,28 @@ exports.autobind = autobind;
 // ProjectInput Class
 class ProjectInput {
     // peopleInputElement: HTMLInputElement;
-    constructor() {
-        var _a;
+    constructor(divElement, formElement, nameElement, amountElement) {
         // this.templateElement = document.getElementById(
         //   'project-input'
         // )! as HTMLTemplateElement;
-        this.hostElement = document.getElementById("status");
+        this.hostElement = document.getElementById(divElement);
         // const importedNode = document.importNode(
         //   this.templateElement.content,
         //   true
         // );
-        this.element = document.querySelector("#formInsert");
+        this.element = document.querySelector(`#${formElement}`);
+        //"#formInsert"
         // this.element.id = 'user-input';
         if (this.element == null)
             console.log("null element");
-        this.nameInputElement = (_a = this.element) === null || _a === void 0 ? void 0 : _a.querySelector("#type");
+        this.nameInputElement = this.element.querySelector(`#${nameElement}`
+        //"#type"
+        );
         if (this.nameInputElement == null)
             console.log("null element");
-        this.amountInputElement = this.element.querySelector("#amountInsertion");
+        this.amountInputElement = this.element.querySelector(`#${amountElement}`
+        // "#amountInsertion"
+        );
         // this.peopleInputElement = this.element.querySelector(
         //   '#people'
         // ) as HTMLInputElement;
@@ -81,7 +85,7 @@ class ProjectInput {
         this.amountInputElement.value = "";
         // this.peopleInputElement.value = '';
     }
-    submitHandler(event) {
+    submitHandlerInsertion(event) {
         return __awaiter(this, void 0, void 0, function* () {
             event.preventDefault();
             const userInput = this.gatherUserInput();
@@ -102,8 +106,27 @@ class ProjectInput {
             }
         });
     }
+    submitHandlerBorrow(event) {
+        return __awaiter(this, void 0, void 0, function* () {
+            event.preventDefault();
+            const userInput = this.gatherUserInput();
+            if (Array.isArray(userInput)) {
+                let validator = new validators_js_1.Post();
+                [validator.title, validator.amount] = userInput;
+                console.log(validator.title);
+                console.log(validator.amount);
+                if (yield validator.validate()) {
+                }
+            }
+        });
+    }
     configure() {
-        this.element.addEventListener("submit", this.submitHandler);
+        if (this.nameInputElement instanceof HTMLInputElement) {
+            this.element.addEventListener("submit", this.submitHandlerInsertion);
+        }
+        else {
+            this.element.addEventListener("submit", this.submitHandlerBorrow);
+        }
     }
 }
 __decorate([
@@ -111,14 +134,21 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Event]),
     __metadata("design:returntype", Promise)
-], ProjectInput.prototype, "submitHandler", null);
+], ProjectInput.prototype, "submitHandlerInsertion", null);
+__decorate([
+    autobind,
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Event]),
+    __metadata("design:returntype", Promise)
+], ProjectInput.prototype, "submitHandlerBorrow", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 const data = resource_js_1.ResourceStorage.getInstance();
 try {
-    const prjInput = new ProjectInput();
+    const prjInput = new ProjectInput("status", "formInsert", "type", "amountInsertion");
 }
 catch (e) {
     console.log("no favicon");
+    console.log(e);
 }
 //# sourceMappingURL=ProjectInput.js.map
