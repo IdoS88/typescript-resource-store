@@ -157,7 +157,7 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
 }
 
 // export declare var data : ResourceStorage;
-const data = ResourceStorage.getInstance();
+export const data = ResourceStorage.getInstance();
 try {
   const prjInputInsert = new ProjectInput<HTMLInputElement>(
     "status",

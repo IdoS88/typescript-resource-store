@@ -47,7 +47,7 @@ export class ResourceStorage {
     this.listeners.push(listenerFn);
   }
 
-  addResource(title: string, amount: number): Result{
+  addResource(title: string, amount: number): Result | null {
     // create instance of resource
     const nr = new Resource(
       title,
@@ -65,17 +65,20 @@ export class ResourceStorage {
     ) {
       // update item
       this.UpdateExistingItemOrBorrowItem = nr;
+      this.executeListeners();
       return Result.Update;
     } else if (this.resources.push(nr)) {
       console.log("push new item");
       // add a new item to resources array
+      this.executeListeners();
+      return Result.Add;
     }
-
+    return null;
+  }
+  executeListeners() {
     for (const listenerFn of this.listeners) {
       (this as any)[listenerFn.name](this.resources.slice());
-      // console.log(listenerFn);
     }
-    return Result.Add;
   }
   get getResources() {
     if (this.resources) return this.resources;
