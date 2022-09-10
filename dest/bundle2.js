@@ -19,9 +19,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProjectInput = exports.autobind = void 0;
+exports.data = exports.ProjectInput = exports.autobind = void 0;
 const validators_js_1 = require("./validators.js");
 const resource_js_1 = require("./resource.js");
+const ProjectOutput_js_1 = require("./ProjectOutput.js");
 // autobind decorator
 function autobind(_, _2, descriptor) {
     const originalMethod = descriptor.value;
@@ -105,14 +106,14 @@ class ProjectInput {
                     if (this.nameInputElement instanceof HTMLInputElement) {
                         console.log("input name");
                         // in case of inserting a new resource or existing resource
-                        if (data.addResource(validator.title.trim(), validator.amount) === resource_js_1.Result.Add) {
+                        if (exports.data.addResource(validator.title.trim(), validator.amount) === resource_js_1.Result.Add) {
                             this.addOptionBorrow(validator.title); // adds option to the borrow select options
                         }
                     }
                     else {
                         // in case of borrowing a resource
                         console.log("select input");
-                        data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title.trim(), -Math.abs(validator.amount)
+                        exports.data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title.trim(), -Math.abs(validator.amount)
                         // makes negative to reduce resource amount
                         );
                         console.log("borrow resource");
@@ -121,7 +122,7 @@ class ProjectInput {
                     }
                 }
                 this.clearInputs();
-                console.log(data.getResources);
+                console.log(exports.data.getResources);
             }
             else {
                 console.log(userInput);
@@ -144,16 +145,14 @@ class ProjectInput {
         select.appendChild(newOption);
     }
     amountHandler() {
-        // a function to remove empty resurces from relevant list and storage.
+        // a function to remove empty resurces from borrow select list
         let select = document.getElementById("list");
-        if (data.getResources) {
-            data.getResources.forEach((r) => {
-                var _a;
+        if (exports.data.getResources) {
+            exports.data.getResources.forEach((r) => {
                 let node = document.getElementById(r.getResourceName);
                 if (r.getResourceAmount === 0) {
                     select.removeChild(node);
-                    (_a = data.getResources) === null || _a === void 0 ? void 0 : _a.splice(data.getResources.indexOf(r), 1);
-                    // remove the option of empty resource from options list and from the resource storage array
+                    // remove the option of empty resource from options list
                 }
             });
         }
@@ -167,17 +166,86 @@ __decorate([
 ], ProjectInput.prototype, "submitHandler", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
-const data = resource_js_1.ResourceStorage.getInstance();
+exports.data = resource_js_1.ResourceStorage.getInstance();
 try {
     const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
     const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
+    const prjOutput = new ProjectOutput_js_1.ProjectOutput();
 }
 catch (e) {
     console.log("no favicon");
     console.log(e);
 }
 
-},{"./resource.js":2,"./validators.js":3}],2:[function(require,module,exports){
+},{"./ProjectOutput.js":2,"./resource.js":3,"./validators.js":4}],2:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ProjectOutput = void 0;
+const ProjectInput_1 = require("./ProjectInput");
+class ProjectOutput {
+    constructor() {
+        this.templateElement = document.getElementById("storage-status");
+        this.hostElement = document.getElementById("output");
+        const importedNode = document.importNode(this.templateElement.content, true);
+        this.element = importedNode.firstElementChild;
+        this.element.id = "output-project";
+        if (this.element instanceof Element)
+            console.log("element isn't undefined");
+        // first output
+        this.renderContent();
+        ProjectInput_1.data.addListener(this.renderResources);
+        this.attach();
+    }
+    attach() {
+        this.hostElement.insertAdjacentElement("afterbegin", this.element);
+    }
+    renderResources() {
+        const content = document.getElementById("content"); // paragraph created in rendercontent()
+        content.innerHTML = ""; // reseting content text for new rendering
+        if (ProjectInput_1.data.getResources) {
+            //rendering intro message
+            if (ProjectInput_1.data.getResourcesLength === 0) {
+                this.renderDefaultMessage(content);
+            }
+            else if (ProjectInput_1.data.getResourcesLength === 1) {
+                const textNode = document.createTextNode("Currently there is " +
+                    ProjectInput_1.data.getResourcesLength +
+                    " resource in storage: \r\n the resource is: \r\n ");
+                content.appendChild(textNode);
+            }
+            else {
+                const textNode = document.createTextNode("Currently there are " +
+                    ProjectInput_1.data.getResourcesLength +
+                    " resources in storage: \r\n the resources are: \r\n");
+                content.appendChild(textNode);
+            }
+            //rendering actual contents
+            for (const prjItem of ProjectInput_1.data.getResources) {
+                content.textContent +=
+                    "\r\n resource name: " +
+                        prjItem.getResourceName +
+                        "\t amount: " +
+                        prjItem.getResourceAmount;
+            }
+        }
+    }
+    renderDefaultMessage(p) {
+        const textNode = document.createTextNode("Currently there aren't any resource in storage");
+        p.appendChild(textNode);
+    }
+    renderContent() {
+        // const headerId = "title";
+        // this.element.querySelector('h2')!.id = headerId;
+        this.element.querySelector("h2").textContent = "Storage Status"; // title header
+        const p = document.createElement("p"); // paragraph for showing content
+        this.renderDefaultMessage(p); // set default status message with no resources
+        p.id = "content";
+        this.element.appendChild(p);
+    }
+}
+exports.ProjectOutput = ProjectOutput;
+
+},{"./ProjectInput":1}],3:[function(require,module,exports){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -220,6 +288,19 @@ class ResourceStorage {
     constructor() {
         this.listeners = [];
         this.resources = [];
+        this.addListener(this.removesEmptyResources);
+    }
+    removesEmptyResources() {
+        console.log(this);
+        console.log(this.resources);
+        const relevantResources = this.resources.slice().filter((r) => {
+            if (r.getResourceAmount > 0) {
+                return true;
+            }
+            else
+                return false;
+        });
+        this.setResources = relevantResources;
     }
     static getInstance() {
         if (this.instance) {
@@ -239,7 +320,7 @@ class ResourceStorage {
         // first checks if input isn't for the first item of resource storage array or if it's of an existing item
         //because there are 2 options wether we want to add a new item or update existing item
         if (Array.isArray(this.getResources) &&
-            this.getResources.length !== 0 &&
+            this.getResources.length > 0 &&
             this.getResources.some(function (r) {
                 return r.getResourceName === title;
             })) {
@@ -250,12 +331,16 @@ class ResourceStorage {
         else if (this.resources.push(nr)) {
             console.log("push new item");
             // add a new item to resources array
+            this.executeListeners();
+            return Result.Add;
         }
+        return null;
+    }
+    executeListeners() {
         for (const listenerFn of this.listeners) {
-            this[listenerFn.name](this.resources.slice());
-            // console.log(listenerFn);
+            // (this as any)[listenerFn.name](this.resources.slice());
+            listenerFn();
         }
-        return Result.Add;
     }
     get getResources() {
         if (this.resources)
@@ -330,6 +415,7 @@ class ResourceStorage {
                 return;
             }
             this.getResources[i].updateResourceAmount = r.getResourceAmount;
+            this.executeListeners();
             return;
         }
         else {
@@ -348,7 +434,7 @@ exports.ResourceStorage = ResourceStorage;
 // }
 // console.log(item.getResourceAmount + item.getResourceName);
 
-},{"class-validator":113}],3:[function(require,module,exports){
+},{"class-validator":114}],4:[function(require,module,exports){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -431,7 +517,7 @@ __decorate([
 ], Post.prototype, "amount", void 0);
 exports.Post = Post;
 
-},{"class-validator":113}],4:[function(require,module,exports){
+},{"class-validator":114}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getFromContainer = exports.useContainer = void 0;
@@ -483,7 +569,7 @@ function getFromContainer(someClass) {
 }
 exports.getFromContainer = getFromContainer;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isValidationOptions = void 0;
@@ -495,7 +581,7 @@ function isValidationOptions(val) {
 }
 exports.isValidationOptions = isValidationOptions;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArrayContains = exports.arrayContains = exports.ARRAY_CONTAINS = void 0;
@@ -527,7 +613,7 @@ function ArrayContains(values, validationOptions) {
 }
 exports.ArrayContains = ArrayContains;
 
-},{"../common/ValidateBy":25}],7:[function(require,module,exports){
+},{"../common/ValidateBy":26}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArrayMaxSize = exports.arrayMaxSize = exports.ARRAY_MAX_SIZE = void 0;
@@ -557,7 +643,7 @@ function ArrayMaxSize(max, validationOptions) {
 }
 exports.ArrayMaxSize = ArrayMaxSize;
 
-},{"../common/ValidateBy":25}],8:[function(require,module,exports){
+},{"../common/ValidateBy":26}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArrayMinSize = exports.arrayMinSize = exports.ARRAY_MIN_SIZE = void 0;
@@ -587,7 +673,7 @@ function ArrayMinSize(min, validationOptions) {
 }
 exports.ArrayMinSize = ArrayMinSize;
 
-},{"../common/ValidateBy":25}],9:[function(require,module,exports){
+},{"../common/ValidateBy":26}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArrayNotContains = exports.arrayNotContains = exports.ARRAY_NOT_CONTAINS = void 0;
@@ -619,7 +705,7 @@ function ArrayNotContains(values, validationOptions) {
 }
 exports.ArrayNotContains = ArrayNotContains;
 
-},{"../common/ValidateBy":25}],10:[function(require,module,exports){
+},{"../common/ValidateBy":26}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArrayNotEmpty = exports.arrayNotEmpty = exports.ARRAY_NOT_EMPTY = void 0;
@@ -648,7 +734,7 @@ function ArrayNotEmpty(validationOptions) {
 }
 exports.ArrayNotEmpty = ArrayNotEmpty;
 
-},{"../common/ValidateBy":25}],11:[function(require,module,exports){
+},{"../common/ValidateBy":26}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ArrayUnique = exports.arrayUnique = exports.ARRAY_UNIQUE = void 0;
@@ -685,7 +771,7 @@ function ArrayUnique(identifierOrOptions, validationOptions) {
 }
 exports.ArrayUnique = ArrayUnique;
 
-},{"../common/ValidateBy":25}],12:[function(require,module,exports){
+},{"../common/ValidateBy":26}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Allow = void 0;
@@ -708,7 +794,7 @@ function Allow(validationOptions) {
 }
 exports.Allow = Allow;
 
-},{"../../metadata/MetadataStorage":115,"../../metadata/ValidationMetadata":116,"../../validation/ValidationTypes":127}],13:[function(require,module,exports){
+},{"../../metadata/MetadataStorage":116,"../../metadata/ValidationMetadata":117,"../../validation/ValidationTypes":128}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Equals = exports.equals = exports.EQUALS = void 0;
@@ -736,7 +822,7 @@ function Equals(comparison, validationOptions) {
 }
 exports.Equals = Equals;
 
-},{"../common/ValidateBy":25}],14:[function(require,module,exports){
+},{"../common/ValidateBy":26}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsDefined = exports.isDefined = exports.IS_DEFINED = void 0;
@@ -765,7 +851,7 @@ function IsDefined(validationOptions) {
 }
 exports.IsDefined = IsDefined;
 
-},{"../../validation/ValidationTypes":127,"./ValidateBy":25}],15:[function(require,module,exports){
+},{"../../validation/ValidationTypes":128,"./ValidateBy":26}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsEmpty = exports.isEmpty = exports.IS_EMPTY = void 0;
@@ -792,7 +878,7 @@ function IsEmpty(validationOptions) {
 }
 exports.IsEmpty = IsEmpty;
 
-},{"../common/ValidateBy":25}],16:[function(require,module,exports){
+},{"../common/ValidateBy":26}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsIn = exports.isIn = exports.IS_IN = void 0;
@@ -820,7 +906,7 @@ function IsIn(values, validationOptions) {
 }
 exports.IsIn = IsIn;
 
-},{"../common/ValidateBy":25}],17:[function(require,module,exports){
+},{"../common/ValidateBy":26}],18:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -851,7 +937,7 @@ function IsLatLong(validationOptions) {
 }
 exports.IsLatLong = IsLatLong;
 
-},{"./ValidateBy":25,"validator/lib/isLatLong":246}],18:[function(require,module,exports){
+},{"./ValidateBy":26,"validator/lib/isLatLong":247}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsLatitude = exports.isLatitude = exports.IS_LATITUDE = void 0;
@@ -879,7 +965,7 @@ function IsLatitude(validationOptions) {
 }
 exports.IsLatitude = IsLatitude;
 
-},{"./IsLatLong":17,"./ValidateBy":25}],19:[function(require,module,exports){
+},{"./IsLatLong":18,"./ValidateBy":26}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsLongitude = exports.isLongitude = exports.IS_LONGITUDE = void 0;
@@ -907,7 +993,7 @@ function IsLongitude(validationOptions) {
 }
 exports.IsLongitude = IsLongitude;
 
-},{"./IsLatLong":17,"./ValidateBy":25}],20:[function(require,module,exports){
+},{"./IsLatLong":18,"./ValidateBy":26}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsNotEmpty = exports.isNotEmpty = exports.IS_NOT_EMPTY = void 0;
@@ -934,7 +1020,7 @@ function IsNotEmpty(validationOptions) {
 }
 exports.IsNotEmpty = IsNotEmpty;
 
-},{"../common/ValidateBy":25}],21:[function(require,module,exports){
+},{"../common/ValidateBy":26}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsNotIn = exports.isNotIn = exports.IS_NOT_IN = void 0;
@@ -962,7 +1048,7 @@ function IsNotIn(values, validationOptions) {
 }
 exports.IsNotIn = IsNotIn;
 
-},{"../common/ValidateBy":25}],22:[function(require,module,exports){
+},{"../common/ValidateBy":26}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsOptional = void 0;
@@ -990,7 +1076,7 @@ function IsOptional(validationOptions) {
 }
 exports.IsOptional = IsOptional;
 
-},{"../../metadata/MetadataStorage":115,"../../metadata/ValidationMetadata":116,"../../validation/ValidationTypes":127}],23:[function(require,module,exports){
+},{"../../metadata/MetadataStorage":116,"../../metadata/ValidationMetadata":117,"../../validation/ValidationTypes":128}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotEquals = exports.notEquals = exports.NOT_EQUALS = void 0;
@@ -1018,7 +1104,7 @@ function NotEquals(comparison, validationOptions) {
 }
 exports.NotEquals = NotEquals;
 
-},{"../common/ValidateBy":25}],24:[function(require,module,exports){
+},{"../common/ValidateBy":26}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Validate = exports.ValidatorConstraint = void 0;
@@ -1061,7 +1147,7 @@ function Validate(constraintClass, constraintsOrValidationOptions, maybeValidati
 }
 exports.Validate = Validate;
 
-},{"../../metadata/ConstraintMetadata":114,"../../metadata/MetadataStorage":115,"../../metadata/ValidationMetadata":116,"../../validation/ValidationTypes":127}],25:[function(require,module,exports){
+},{"../../metadata/ConstraintMetadata":115,"../../metadata/MetadataStorage":116,"../../metadata/ValidationMetadata":117,"../../validation/ValidationTypes":128}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidateBy = exports.buildMessage = void 0;
@@ -1087,7 +1173,7 @@ function ValidateBy(options, validationOptions) {
 }
 exports.ValidateBy = ValidateBy;
 
-},{"../../register-decorator":117}],26:[function(require,module,exports){
+},{"../../register-decorator":118}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidateIf = void 0;
@@ -1111,7 +1197,7 @@ function ValidateIf(condition, validationOptions) {
 }
 exports.ValidateIf = ValidateIf;
 
-},{"../../metadata/MetadataStorage":115,"../../metadata/ValidationMetadata":116,"../../validation/ValidationTypes":127}],27:[function(require,module,exports){
+},{"../../metadata/MetadataStorage":116,"../../metadata/ValidationMetadata":117,"../../validation/ValidationTypes":128}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidateNested = void 0;
@@ -1137,7 +1223,7 @@ function ValidateNested(validationOptions) {
 }
 exports.ValidateNested = ValidateNested;
 
-},{"../../metadata/MetadataStorage":115,"../../metadata/ValidationMetadata":116,"../../validation/ValidationTypes":127}],28:[function(require,module,exports){
+},{"../../metadata/MetadataStorage":116,"../../metadata/ValidationMetadata":117,"../../validation/ValidationTypes":128}],29:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidatePromise = void 0;
@@ -1160,7 +1246,7 @@ function ValidatePromise(validationOptions) {
 }
 exports.ValidatePromise = ValidatePromise;
 
-},{"../../metadata/MetadataStorage":115,"../../metadata/ValidationMetadata":116,"../../validation/ValidationTypes":127}],29:[function(require,module,exports){
+},{"../../metadata/MetadataStorage":116,"../../metadata/ValidationMetadata":117,"../../validation/ValidationTypes":128}],30:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MaxDate = exports.maxDate = exports.MAX_DATE = void 0;
@@ -1188,7 +1274,7 @@ function MaxDate(date, validationOptions) {
 }
 exports.MaxDate = MaxDate;
 
-},{"../common/ValidateBy":25}],30:[function(require,module,exports){
+},{"../common/ValidateBy":26}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MinDate = exports.minDate = exports.MIN_DATE = void 0;
@@ -1216,7 +1302,7 @@ function MinDate(date, validationOptions) {
 }
 exports.MinDate = MinDate;
 
-},{"../common/ValidateBy":25}],31:[function(require,module,exports){
+},{"../common/ValidateBy":26}],32:[function(require,module,exports){
 "use strict";
 // -------------------------------------------------------------------------
 // System
@@ -1360,7 +1446,7 @@ __exportStar(require("./array/ArrayUnique"), exports);
 __exportStar(require("./object/IsNotEmptyObject"), exports);
 __exportStar(require("./object/IsInstance"), exports);
 
-},{"./array/ArrayContains":6,"./array/ArrayMaxSize":7,"./array/ArrayMinSize":8,"./array/ArrayNotContains":9,"./array/ArrayNotEmpty":10,"./array/ArrayUnique":11,"./common/Allow":12,"./common/Equals":13,"./common/IsDefined":14,"./common/IsEmpty":15,"./common/IsIn":16,"./common/IsLatLong":17,"./common/IsLatitude":18,"./common/IsLongitude":19,"./common/IsNotEmpty":20,"./common/IsNotIn":21,"./common/IsOptional":22,"./common/NotEquals":23,"./common/Validate":24,"./common/ValidateBy":25,"./common/ValidateIf":26,"./common/ValidateNested":27,"./common/ValidatePromise":28,"./date/MaxDate":29,"./date/MinDate":30,"./number/IsDivisibleBy":32,"./number/IsNegative":33,"./number/IsPositive":34,"./number/Max":35,"./number/Min":36,"./object/IsInstance":37,"./object/IsNotEmptyObject":38,"./string/Contains":39,"./string/IsAlpha":40,"./string/IsAlphanumeric":41,"./string/IsAscii":42,"./string/IsBIC":43,"./string/IsBase32":44,"./string/IsBase64":45,"./string/IsBooleanString":46,"./string/IsBtcAddress":47,"./string/IsByteLength":48,"./string/IsCreditCard":49,"./string/IsCurrency":50,"./string/IsDataURI":51,"./string/IsDateString":52,"./string/IsDecimal":53,"./string/IsEAN":54,"./string/IsEmail":55,"./string/IsEthereumAddress":56,"./string/IsFQDN":57,"./string/IsFirebasePushId":58,"./string/IsFullWidth":59,"./string/IsHSL":60,"./string/IsHalfWidth":61,"./string/IsHash":62,"./string/IsHexColor":63,"./string/IsHexadecimal":64,"./string/IsIBAN":65,"./string/IsIP":66,"./string/IsISBN":67,"./string/IsISIN":68,"./string/IsISO31661Alpha2":69,"./string/IsISO31661Alpha3":70,"./string/IsISO8601":71,"./string/IsISRC":72,"./string/IsISSN":73,"./string/IsIdentityCard":74,"./string/IsJSON":75,"./string/IsJWT":76,"./string/IsLocale":77,"./string/IsLowercase":78,"./string/IsMacAddress":79,"./string/IsMagnetURI":80,"./string/IsMilitaryTime":81,"./string/IsMimeType":82,"./string/IsMobilePhone":83,"./string/IsMongoId":84,"./string/IsMultibyte":85,"./string/IsNumberString":86,"./string/IsOctal":87,"./string/IsPassportNumber":88,"./string/IsPhoneNumber":89,"./string/IsPort":90,"./string/IsPostalCode":91,"./string/IsRFC3339":92,"./string/IsRgbColor":93,"./string/IsSemVer":94,"./string/IsSurrogatePair":95,"./string/IsUUID":96,"./string/IsUppercase":97,"./string/IsUrl":98,"./string/IsVariableWidth":99,"./string/Length":100,"./string/Matches":101,"./string/MaxLength":102,"./string/MinLength":103,"./string/NotContains":104,"./typechecker/IsArray":105,"./typechecker/IsBoolean":106,"./typechecker/IsDate":107,"./typechecker/IsEnum":108,"./typechecker/IsInt":109,"./typechecker/IsNumber":110,"./typechecker/IsObject":111,"./typechecker/IsString":112}],32:[function(require,module,exports){
+},{"./array/ArrayContains":7,"./array/ArrayMaxSize":8,"./array/ArrayMinSize":9,"./array/ArrayNotContains":10,"./array/ArrayNotEmpty":11,"./array/ArrayUnique":12,"./common/Allow":13,"./common/Equals":14,"./common/IsDefined":15,"./common/IsEmpty":16,"./common/IsIn":17,"./common/IsLatLong":18,"./common/IsLatitude":19,"./common/IsLongitude":20,"./common/IsNotEmpty":21,"./common/IsNotIn":22,"./common/IsOptional":23,"./common/NotEquals":24,"./common/Validate":25,"./common/ValidateBy":26,"./common/ValidateIf":27,"./common/ValidateNested":28,"./common/ValidatePromise":29,"./date/MaxDate":30,"./date/MinDate":31,"./number/IsDivisibleBy":33,"./number/IsNegative":34,"./number/IsPositive":35,"./number/Max":36,"./number/Min":37,"./object/IsInstance":38,"./object/IsNotEmptyObject":39,"./string/Contains":40,"./string/IsAlpha":41,"./string/IsAlphanumeric":42,"./string/IsAscii":43,"./string/IsBIC":44,"./string/IsBase32":45,"./string/IsBase64":46,"./string/IsBooleanString":47,"./string/IsBtcAddress":48,"./string/IsByteLength":49,"./string/IsCreditCard":50,"./string/IsCurrency":51,"./string/IsDataURI":52,"./string/IsDateString":53,"./string/IsDecimal":54,"./string/IsEAN":55,"./string/IsEmail":56,"./string/IsEthereumAddress":57,"./string/IsFQDN":58,"./string/IsFirebasePushId":59,"./string/IsFullWidth":60,"./string/IsHSL":61,"./string/IsHalfWidth":62,"./string/IsHash":63,"./string/IsHexColor":64,"./string/IsHexadecimal":65,"./string/IsIBAN":66,"./string/IsIP":67,"./string/IsISBN":68,"./string/IsISIN":69,"./string/IsISO31661Alpha2":70,"./string/IsISO31661Alpha3":71,"./string/IsISO8601":72,"./string/IsISRC":73,"./string/IsISSN":74,"./string/IsIdentityCard":75,"./string/IsJSON":76,"./string/IsJWT":77,"./string/IsLocale":78,"./string/IsLowercase":79,"./string/IsMacAddress":80,"./string/IsMagnetURI":81,"./string/IsMilitaryTime":82,"./string/IsMimeType":83,"./string/IsMobilePhone":84,"./string/IsMongoId":85,"./string/IsMultibyte":86,"./string/IsNumberString":87,"./string/IsOctal":88,"./string/IsPassportNumber":89,"./string/IsPhoneNumber":90,"./string/IsPort":91,"./string/IsPostalCode":92,"./string/IsRFC3339":93,"./string/IsRgbColor":94,"./string/IsSemVer":95,"./string/IsSurrogatePair":96,"./string/IsUUID":97,"./string/IsUppercase":98,"./string/IsUrl":99,"./string/IsVariableWidth":100,"./string/Length":101,"./string/Matches":102,"./string/MaxLength":103,"./string/MinLength":104,"./string/NotContains":105,"./typechecker/IsArray":106,"./typechecker/IsBoolean":107,"./typechecker/IsDate":108,"./typechecker/IsEnum":109,"./typechecker/IsInt":110,"./typechecker/IsNumber":111,"./typechecker/IsObject":112,"./typechecker/IsString":113}],33:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1392,7 +1478,7 @@ function IsDivisibleBy(num, validationOptions) {
 }
 exports.IsDivisibleBy = IsDivisibleBy;
 
-},{"../common/ValidateBy":25,"validator/lib/isDivisibleBy":221}],33:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isDivisibleBy":222}],34:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsNegative = exports.isNegative = exports.IS_NEGATIVE = void 0;
@@ -1419,7 +1505,7 @@ function IsNegative(validationOptions) {
 }
 exports.IsNegative = IsNegative;
 
-},{"../common/ValidateBy":25}],34:[function(require,module,exports){
+},{"../common/ValidateBy":26}],35:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsPositive = exports.isPositive = exports.IS_POSITIVE = void 0;
@@ -1446,7 +1532,7 @@ function IsPositive(validationOptions) {
 }
 exports.IsPositive = IsPositive;
 
-},{"../common/ValidateBy":25}],35:[function(require,module,exports){
+},{"../common/ValidateBy":26}],36:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Max = exports.max = exports.MAX = void 0;
@@ -1474,7 +1560,7 @@ function Max(maxValue, validationOptions) {
 }
 exports.Max = Max;
 
-},{"../common/ValidateBy":25}],36:[function(require,module,exports){
+},{"../common/ValidateBy":26}],37:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Min = exports.min = exports.MIN = void 0;
@@ -1502,7 +1588,7 @@ function Min(minValue, validationOptions) {
 }
 exports.Min = Min;
 
-},{"../common/ValidateBy":25}],37:[function(require,module,exports){
+},{"../common/ValidateBy":26}],38:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsInstance = exports.isInstance = exports.IS_INSTANCE = void 0;
@@ -1537,7 +1623,7 @@ function IsInstance(targetType, validationOptions) {
 }
 exports.IsInstance = IsInstance;
 
-},{"../common/ValidateBy":25}],38:[function(require,module,exports){
+},{"../common/ValidateBy":26}],39:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsNotEmptyObject = exports.isNotEmptyObject = exports.IS_NOT_EMPTY_OBJECT = void 0;
@@ -1579,7 +1665,7 @@ function IsNotEmptyObject(options, validationOptions) {
 }
 exports.IsNotEmptyObject = IsNotEmptyObject;
 
-},{"../common/ValidateBy":25,"../typechecker/IsObject":111}],39:[function(require,module,exports){
+},{"../common/ValidateBy":26,"../typechecker/IsObject":112}],40:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1613,7 +1699,7 @@ function Contains(seed, validationOptions) {
 }
 exports.Contains = Contains;
 
-},{"../common/ValidateBy":25,"validator/lib/contains":207}],40:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/contains":208}],41:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1647,7 +1733,7 @@ function IsAlpha(locale, validationOptions) {
 }
 exports.IsAlpha = IsAlpha;
 
-},{"../common/ValidateBy":25,"validator/lib/isAlpha":208}],41:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isAlpha":209}],42:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1681,7 +1767,7 @@ function IsAlphanumeric(locale, validationOptions) {
 }
 exports.IsAlphanumeric = IsAlphanumeric;
 
-},{"../common/ValidateBy":25,"validator/lib/isAlphanumeric":209}],42:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isAlphanumeric":210}],43:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1714,7 +1800,7 @@ function IsAscii(validationOptions) {
 }
 exports.IsAscii = IsAscii;
 
-},{"../common/ValidateBy":25,"validator/lib/isAscii":210}],43:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isAscii":211}],44:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1747,7 +1833,7 @@ function IsBIC(validationOptions) {
 }
 exports.IsBIC = IsBIC;
 
-},{"../common/ValidateBy":25,"validator/lib/isBIC":211}],44:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isBIC":212}],45:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1780,7 +1866,7 @@ function IsBase32(validationOptions) {
 }
 exports.IsBase32 = IsBase32;
 
-},{"../common/ValidateBy":25,"validator/lib/isBase32":212}],45:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isBase32":213}],46:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1813,7 +1899,7 @@ function IsBase64(validationOptions) {
 }
 exports.IsBase64 = IsBase64;
 
-},{"../common/ValidateBy":25,"validator/lib/isBase64":213}],46:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isBase64":214}],47:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1846,7 +1932,7 @@ function IsBooleanString(validationOptions) {
 }
 exports.IsBooleanString = IsBooleanString;
 
-},{"../common/ValidateBy":25,"validator/lib/isBoolean":214}],47:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isBoolean":215}],48:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1879,7 +1965,7 @@ function IsBtcAddress(validationOptions) {
 }
 exports.IsBtcAddress = IsBtcAddress;
 
-},{"../common/ValidateBy":25,"validator/lib/isBtcAddress":215}],48:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isBtcAddress":216}],49:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1913,7 +1999,7 @@ function IsByteLength(min, max, validationOptions) {
 }
 exports.IsByteLength = IsByteLength;
 
-},{"../common/ValidateBy":25,"validator/lib/isByteLength":216}],49:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isByteLength":217}],50:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1946,7 +2032,7 @@ function IsCreditCard(validationOptions) {
 }
 exports.IsCreditCard = IsCreditCard;
 
-},{"../common/ValidateBy":25,"validator/lib/isCreditCard":217}],50:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isCreditCard":218}],51:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -1980,7 +2066,7 @@ function IsCurrency(options, validationOptions) {
 }
 exports.IsCurrency = IsCurrency;
 
-},{"../common/ValidateBy":25,"validator/lib/isCurrency":218}],51:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isCurrency":219}],52:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2013,7 +2099,7 @@ function IsDataURI(validationOptions) {
 }
 exports.IsDataURI = IsDataURI;
 
-},{"../common/ValidateBy":25,"validator/lib/isDataURI":219}],52:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isDataURI":220}],53:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsDateString = exports.isDateString = exports.IS_DATE_STRING = void 0;
@@ -2042,7 +2128,7 @@ function IsDateString(options, validationOptions) {
 }
 exports.IsDateString = IsDateString;
 
-},{"../common/ValidateBy":25,"./IsISO8601":71}],53:[function(require,module,exports){
+},{"../common/ValidateBy":26,"./IsISO8601":72}],54:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2076,7 +2162,7 @@ function IsDecimal(options, validationOptions) {
 }
 exports.IsDecimal = IsDecimal;
 
-},{"../common/ValidateBy":25,"validator/lib/isDecimal":220}],54:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isDecimal":221}],55:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2109,7 +2195,7 @@ function IsEAN(validationOptions) {
 }
 exports.IsEAN = IsEAN;
 
-},{"../common/ValidateBy":25,"validator/lib/isEAN":222}],55:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isEAN":223}],56:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2143,7 +2229,7 @@ function IsEmail(options, validationOptions) {
 }
 exports.IsEmail = IsEmail;
 
-},{"../common/ValidateBy":25,"validator/lib/isEmail":223}],56:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isEmail":224}],57:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2176,7 +2262,7 @@ function IsEthereumAddress(validationOptions) {
 }
 exports.IsEthereumAddress = IsEthereumAddress;
 
-},{"../common/ValidateBy":25,"validator/lib/isEthereumAddress":224}],57:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isEthereumAddress":225}],58:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2210,7 +2296,7 @@ function IsFQDN(options, validationOptions) {
 }
 exports.IsFQDN = IsFQDN;
 
-},{"../common/ValidateBy":25,"validator/lib/isFQDN":225}],58:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isFQDN":226}],59:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsFirebasePushId = exports.isFirebasePushId = exports.IS_FIREBASE_PUSH_ID = void 0;
@@ -2240,7 +2326,7 @@ function IsFirebasePushId(validationOptions) {
 }
 exports.IsFirebasePushId = IsFirebasePushId;
 
-},{"../common/ValidateBy":25}],59:[function(require,module,exports){
+},{"../common/ValidateBy":26}],60:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2273,7 +2359,7 @@ function IsFullWidth(validationOptions) {
 }
 exports.IsFullWidth = IsFullWidth;
 
-},{"../common/ValidateBy":25,"validator/lib/isFullWidth":227}],60:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isFullWidth":228}],61:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2308,7 +2394,7 @@ function IsHSL(validationOptions) {
 }
 exports.IsHSL = IsHSL;
 
-},{"../common/ValidateBy":25,"validator/lib/isHSL":228}],61:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isHSL":229}],62:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2341,7 +2427,7 @@ function IsHalfWidth(validationOptions) {
 }
 exports.IsHalfWidth = IsHalfWidth;
 
-},{"../common/ValidateBy":25,"validator/lib/isHalfWidth":229}],62:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isHalfWidth":230}],63:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2377,7 +2463,7 @@ function IsHash(algorithm, validationOptions) {
 }
 exports.IsHash = IsHash;
 
-},{"../common/ValidateBy":25,"validator/lib/isHash":230}],63:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isHash":231}],64:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2410,7 +2496,7 @@ function IsHexColor(validationOptions) {
 }
 exports.IsHexColor = IsHexColor;
 
-},{"../common/ValidateBy":25,"validator/lib/isHexColor":231}],64:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isHexColor":232}],65:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2443,7 +2529,7 @@ function IsHexadecimal(validationOptions) {
 }
 exports.IsHexadecimal = IsHexadecimal;
 
-},{"../common/ValidateBy":25,"validator/lib/isHexadecimal":232}],65:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isHexadecimal":233}],66:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2476,7 +2562,7 @@ function IsIBAN(validationOptions) {
 }
 exports.IsIBAN = IsIBAN;
 
-},{"../common/ValidateBy":25,"validator/lib/isIBAN":233}],66:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isIBAN":234}],67:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2512,7 +2598,7 @@ function IsIP(version, validationOptions) {
 }
 exports.IsIP = IsIP;
 
-},{"../common/ValidateBy":25,"validator/lib/isIP":234}],67:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isIP":235}],68:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2548,7 +2634,7 @@ function IsISBN(version, validationOptions) {
 }
 exports.IsISBN = IsISBN;
 
-},{"../common/ValidateBy":25,"validator/lib/isISBN":235}],68:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isISBN":236}],69:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2581,7 +2667,7 @@ function IsISIN(validationOptions) {
 }
 exports.IsISIN = IsISIN;
 
-},{"../common/ValidateBy":25,"validator/lib/isISIN":236}],69:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isISIN":237}],70:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2612,7 +2698,7 @@ function IsISO31661Alpha2(validationOptions) {
 }
 exports.IsISO31661Alpha2 = IsISO31661Alpha2;
 
-},{"../common/ValidateBy":25,"validator/lib/isISO31661Alpha2":237}],70:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isISO31661Alpha2":238}],71:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2643,7 +2729,7 @@ function IsISO31661Alpha3(validationOptions) {
 }
 exports.IsISO31661Alpha3 = IsISO31661Alpha3;
 
-},{"../common/ValidateBy":25,"validator/lib/isISO31661Alpha3":238}],71:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isISO31661Alpha3":239}],72:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2679,7 +2765,7 @@ function IsISO8601(options, validationOptions) {
 }
 exports.IsISO8601 = IsISO8601;
 
-},{"../common/ValidateBy":25,"validator/lib/isISO8601":239}],72:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isISO8601":240}],73:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2712,7 +2798,7 @@ function IsISRC(validationOptions) {
 }
 exports.IsISRC = IsISRC;
 
-},{"../common/ValidateBy":25,"validator/lib/isISRC":240}],73:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isISRC":241}],74:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2746,7 +2832,7 @@ function IsISSN(options, validationOptions) {
 }
 exports.IsISSN = IsISSN;
 
-},{"../common/ValidateBy":25,"validator/lib/isISSN":241}],74:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isISSN":242}],75:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2784,7 +2870,7 @@ function IsIdentityCard(locale, validationOptions) {
 }
 exports.IsIdentityCard = IsIdentityCard;
 
-},{"../common/ValidateBy":25,"validator/lib/isIdentityCard":242}],75:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isIdentityCard":243}],76:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2817,7 +2903,7 @@ function IsJSON(validationOptions) {
 }
 exports.IsJSON = IsJSON;
 
-},{"../common/ValidateBy":25,"validator/lib/isJSON":244}],76:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isJSON":245}],77:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2850,7 +2936,7 @@ function IsJWT(validationOptions) {
 }
 exports.IsJWT = IsJWT;
 
-},{"../common/ValidateBy":25,"validator/lib/isJWT":245}],77:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isJWT":246}],78:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2883,7 +2969,7 @@ function IsLocale(validationOptions) {
 }
 exports.IsLocale = IsLocale;
 
-},{"../common/ValidateBy":25,"validator/lib/isLocale":248}],78:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isLocale":249}],79:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2916,7 +3002,7 @@ function IsLowercase(validationOptions) {
 }
 exports.IsLowercase = IsLowercase;
 
-},{"../common/ValidateBy":25,"validator/lib/isLowercase":249}],79:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isLowercase":250}],80:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2951,7 +3037,7 @@ function IsMACAddress(optionsOrValidationOptionsArg, validationOptionsArg) {
 }
 exports.IsMACAddress = IsMACAddress;
 
-},{"../ValidationOptions":5,"../common/ValidateBy":25,"validator/lib/isMACAddress":250}],80:[function(require,module,exports){
+},{"../ValidationOptions":6,"../common/ValidateBy":26,"validator/lib/isMACAddress":251}],81:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -2984,7 +3070,7 @@ function IsMagnetURI(validationOptions) {
 }
 exports.IsMagnetURI = IsMagnetURI;
 
-},{"../common/ValidateBy":25,"validator/lib/isMagnetURI":251}],81:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isMagnetURI":252}],82:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3018,7 +3104,7 @@ function IsMilitaryTime(validationOptions) {
 }
 exports.IsMilitaryTime = IsMilitaryTime;
 
-},{"../common/ValidateBy":25,"validator/lib/matches":269}],82:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/matches":270}],83:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3051,7 +3137,7 @@ function IsMimeType(validationOptions) {
 }
 exports.IsMimeType = IsMimeType;
 
-},{"../common/ValidateBy":25,"validator/lib/isMimeType":252}],83:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isMimeType":253}],84:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3101,7 +3187,7 @@ function IsMobilePhone(locale, options, validationOptions) {
 }
 exports.IsMobilePhone = IsMobilePhone;
 
-},{"../common/ValidateBy":25,"validator/lib/isMobilePhone":253}],84:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isMobilePhone":254}],85:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3134,7 +3220,7 @@ function IsMongoId(validationOptions) {
 }
 exports.IsMongoId = IsMongoId;
 
-},{"../common/ValidateBy":25,"validator/lib/isMongoId":254}],85:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isMongoId":255}],86:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3167,7 +3253,7 @@ function IsMultibyte(validationOptions) {
 }
 exports.IsMultibyte = IsMultibyte;
 
-},{"../common/ValidateBy":25,"validator/lib/isMultibyte":255}],86:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isMultibyte":256}],87:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3201,7 +3287,7 @@ function IsNumberString(options, validationOptions) {
 }
 exports.IsNumberString = IsNumberString;
 
-},{"../common/ValidateBy":25,"validator/lib/isNumeric":256}],87:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isNumeric":257}],88:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3234,7 +3320,7 @@ function IsOctal(validationOptions) {
 }
 exports.IsOctal = IsOctal;
 
-},{"../common/ValidateBy":25,"validator/lib/isOctal":257}],88:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isOctal":258}],89:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3268,7 +3354,7 @@ function IsPassportNumber(countryCode, validationOptions) {
 }
 exports.IsPassportNumber = IsPassportNumber;
 
-},{"../common/ValidateBy":25,"validator/lib/isPassportNumber":258}],89:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isPassportNumber":259}],90:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsPhoneNumber = exports.isPhoneNumber = exports.IS_PHONE_NUMBER = void 0;
@@ -3314,7 +3400,7 @@ function IsPhoneNumber(region, validationOptions) {
 }
 exports.IsPhoneNumber = IsPhoneNumber;
 
-},{"../common/ValidateBy":25,"libphonenumber-js":203}],90:[function(require,module,exports){
+},{"../common/ValidateBy":26,"libphonenumber-js":204}],91:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3345,7 +3431,7 @@ function IsPort(validationOptions) {
 }
 exports.IsPort = IsPort;
 
-},{"../common/ValidateBy":25,"validator/lib/isPort":259}],91:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isPort":260}],92:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3381,7 +3467,7 @@ function IsPostalCode(locale, validationOptions) {
 }
 exports.IsPostalCode = IsPostalCode;
 
-},{"../common/ValidateBy":25,"validator/lib/isPostalCode":260}],92:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isPostalCode":261}],93:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3414,7 +3500,7 @@ function IsRFC3339(validationOptions) {
 }
 exports.IsRFC3339 = IsRFC3339;
 
-},{"../common/ValidateBy":25,"validator/lib/isRFC3339":261}],93:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isRFC3339":262}],94:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3450,7 +3536,7 @@ function IsRgbColor(includePercentValues, validationOptions) {
 }
 exports.IsRgbColor = IsRgbColor;
 
-},{"../common/ValidateBy":25,"validator/lib/isRgbColor":262}],94:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isRgbColor":263}],95:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3483,7 +3569,7 @@ function IsSemVer(validationOptions) {
 }
 exports.IsSemVer = IsSemVer;
 
-},{"../common/ValidateBy":25,"validator/lib/isSemVer":263}],95:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isSemVer":264}],96:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3516,7 +3602,7 @@ function IsSurrogatePair(validationOptions) {
 }
 exports.IsSurrogatePair = IsSurrogatePair;
 
-},{"../common/ValidateBy":25,"validator/lib/isSurrogatePair":264}],96:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isSurrogatePair":265}],97:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3550,7 +3636,7 @@ function IsUUID(version, validationOptions) {
 }
 exports.IsUUID = IsUUID;
 
-},{"../common/ValidateBy":25,"validator/lib/isUUID":266}],97:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isUUID":267}],98:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3583,7 +3669,7 @@ function IsUppercase(validationOptions) {
 }
 exports.IsUppercase = IsUppercase;
 
-},{"../common/ValidateBy":25,"validator/lib/isUppercase":267}],98:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isUppercase":268}],99:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3617,7 +3703,7 @@ function IsUrl(options, validationOptions) {
 }
 exports.IsUrl = IsUrl;
 
-},{"../common/ValidateBy":25,"validator/lib/isURL":265}],99:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isURL":266}],100:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3650,7 +3736,7 @@ function IsVariableWidth(validationOptions) {
 }
 exports.IsVariableWidth = IsVariableWidth;
 
-},{"../common/ValidateBy":25,"validator/lib/isVariableWidth":268}],100:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isVariableWidth":269}],101:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3695,7 +3781,7 @@ function Length(min, max, validationOptions) {
 }
 exports.Length = Length;
 
-},{"../common/ValidateBy":25,"validator/lib/isLength":247}],101:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isLength":248}],102:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3728,7 +3814,7 @@ function Matches(pattern, modifiersOrAnnotationOptions, validationOptions) {
 }
 exports.Matches = Matches;
 
-},{"../common/ValidateBy":25,"validator/lib/matches":269}],102:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/matches":270}],103:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3762,7 +3848,7 @@ function MaxLength(max, validationOptions) {
 }
 exports.MaxLength = MaxLength;
 
-},{"../common/ValidateBy":25,"validator/lib/isLength":247}],103:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isLength":248}],104:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3796,7 +3882,7 @@ function MinLength(min, validationOptions) {
 }
 exports.MinLength = MinLength;
 
-},{"../common/ValidateBy":25,"validator/lib/isLength":247}],104:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/isLength":248}],105:[function(require,module,exports){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -3830,7 +3916,7 @@ function NotContains(seed, validationOptions) {
 }
 exports.NotContains = NotContains;
 
-},{"../common/ValidateBy":25,"validator/lib/contains":207}],105:[function(require,module,exports){
+},{"../common/ValidateBy":26,"validator/lib/contains":208}],106:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsArray = exports.isArray = exports.IS_ARRAY = void 0;
@@ -3857,7 +3943,7 @@ function IsArray(validationOptions) {
 }
 exports.IsArray = IsArray;
 
-},{"../common/ValidateBy":25}],106:[function(require,module,exports){
+},{"../common/ValidateBy":26}],107:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsBoolean = exports.isBoolean = exports.IS_BOOLEAN = void 0;
@@ -3884,7 +3970,7 @@ function IsBoolean(validationOptions) {
 }
 exports.IsBoolean = IsBoolean;
 
-},{"../common/ValidateBy":25}],107:[function(require,module,exports){
+},{"../common/ValidateBy":26}],108:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsDate = exports.isDate = exports.IS_DATE = void 0;
@@ -3911,7 +3997,7 @@ function IsDate(validationOptions) {
 }
 exports.IsDate = IsDate;
 
-},{"../common/ValidateBy":25}],108:[function(require,module,exports){
+},{"../common/ValidateBy":26}],109:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsEnum = exports.isEnum = exports.IS_ENUM = void 0;
@@ -3940,7 +4026,7 @@ function IsEnum(entity, validationOptions) {
 }
 exports.IsEnum = IsEnum;
 
-},{"../common/ValidateBy":25}],109:[function(require,module,exports){
+},{"../common/ValidateBy":26}],110:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsInt = exports.isInt = exports.IS_INT = void 0;
@@ -3967,7 +4053,7 @@ function IsInt(validationOptions) {
 }
 exports.IsInt = IsInt;
 
-},{"../common/ValidateBy":25}],110:[function(require,module,exports){
+},{"../common/ValidateBy":26}],111:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsNumber = exports.isNumber = exports.IS_NUMBER = void 0;
@@ -4013,7 +4099,7 @@ function IsNumber(options = {}, validationOptions) {
 }
 exports.IsNumber = IsNumber;
 
-},{"../common/ValidateBy":25}],111:[function(require,module,exports){
+},{"../common/ValidateBy":26}],112:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsObject = exports.isObject = exports.IS_OBJECT = void 0;
@@ -4042,7 +4128,7 @@ function IsObject(validationOptions) {
 }
 exports.IsObject = IsObject;
 
-},{"../common/ValidateBy":25}],112:[function(require,module,exports){
+},{"../common/ValidateBy":26}],113:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IsString = exports.isString = exports.IS_STRING = void 0;
@@ -4069,7 +4155,7 @@ function IsString(validationOptions) {
 }
 exports.IsString = IsString;
 
-},{"../common/ValidateBy":25}],113:[function(require,module,exports){
+},{"../common/ValidateBy":26}],114:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -4147,7 +4233,7 @@ function registerSchema(schema) {
 }
 exports.registerSchema = registerSchema;
 
-},{"./container":4,"./decorator/ValidationOptions":5,"./decorator/decorators":31,"./metadata/MetadataStorage":115,"./register-decorator":117,"./validation-schema/ValidationSchema":122,"./validation/ValidationArguments":124,"./validation/ValidationError":125,"./validation/ValidationTypes":127,"./validation/Validator":129,"./validation/ValidatorConstraintInterface":130,"./validation/ValidatorOptions":131}],114:[function(require,module,exports){
+},{"./container":5,"./decorator/ValidationOptions":6,"./decorator/decorators":32,"./metadata/MetadataStorage":116,"./register-decorator":118,"./validation-schema/ValidationSchema":123,"./validation/ValidationArguments":125,"./validation/ValidationError":126,"./validation/ValidationTypes":128,"./validation/Validator":130,"./validation/ValidatorConstraintInterface":131,"./validation/ValidatorOptions":132}],115:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConstraintMetadata = void 0;
@@ -4176,7 +4262,7 @@ class ConstraintMetadata {
 }
 exports.ConstraintMetadata = ConstraintMetadata;
 
-},{"../container":4}],115:[function(require,module,exports){
+},{"../container":5}],116:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMetadataStorage = exports.MetadataStorage = void 0;
@@ -4314,7 +4400,7 @@ function getMetadataStorage() {
 }
 exports.getMetadataStorage = getMetadataStorage;
 
-},{"../utils":120,"../validation-schema/ValidationSchemaToMetadataTransformer":123}],116:[function(require,module,exports){
+},{"../utils":121,"../validation-schema/ValidationSchemaToMetadataTransformer":124}],117:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidationMetadata = void 0;
@@ -4355,7 +4441,7 @@ class ValidationMetadata {
 }
 exports.ValidationMetadata = ValidationMetadata;
 
-},{}],117:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerDecorator = void 0;
@@ -4403,7 +4489,7 @@ function registerDecorator(options) {
 }
 exports.registerDecorator = registerDecorator;
 
-},{"./container":4,"./metadata/ConstraintMetadata":114,"./metadata/MetadataStorage":115,"./metadata/ValidationMetadata":116,"./validation/ValidationTypes":127}],118:[function(require,module,exports){
+},{"./container":5,"./metadata/ConstraintMetadata":115,"./metadata/MetadataStorage":116,"./metadata/ValidationMetadata":117,"./validation/ValidationTypes":128}],119:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.convertToArray = void 0;
@@ -4418,7 +4504,7 @@ function convertToArray(val) {
 }
 exports.convertToArray = convertToArray;
 
-},{}],119:[function(require,module,exports){
+},{}],120:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -4454,7 +4540,7 @@ function getGlobal() {
 exports.getGlobal = getGlobal;
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],120:[function(require,module,exports){
+},{}],121:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -4471,7 +4557,7 @@ __exportStar(require("./convert-to-array.util"), exports);
 __exportStar(require("./get-global.util"), exports);
 __exportStar(require("./is-promise.util"), exports);
 
-},{"./convert-to-array.util":118,"./get-global.util":119,"./is-promise.util":121}],121:[function(require,module,exports){
+},{"./convert-to-array.util":119,"./get-global.util":120,"./is-promise.util":122}],122:[function(require,module,exports){
 "use strict";
 // https://github.com/TylorS/typed-is-promise/blob/abf1514e1b6961adfc75765476b0debb96b2c3ae/src/index.ts
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -4481,11 +4567,11 @@ function isPromise(p) {
 }
 exports.isPromise = isPromise;
 
-},{}],122:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 
-},{}],123:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidationSchemaToMetadataTransformer = void 0;
@@ -4520,11 +4606,11 @@ class ValidationSchemaToMetadataTransformer {
 }
 exports.ValidationSchemaToMetadataTransformer = ValidationSchemaToMetadataTransformer;
 
-},{"../metadata/ValidationMetadata":116}],124:[function(require,module,exports){
+},{"../metadata/ValidationMetadata":117}],125:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 
-},{}],125:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidationError = void 0;
@@ -4569,7 +4655,7 @@ class ValidationError {
 }
 exports.ValidationError = ValidationError;
 
-},{}],126:[function(require,module,exports){
+},{}],127:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidationExecutor = void 0;
@@ -4892,7 +4978,7 @@ class ValidationExecutor {
 }
 exports.ValidationExecutor = ValidationExecutor;
 
-},{"../metadata/MetadataStorage":115,"../utils":120,"./ValidationError":125,"./ValidationTypes":127,"./ValidationUtils":128}],127:[function(require,module,exports){
+},{"../metadata/MetadataStorage":116,"../utils":121,"./ValidationError":126,"./ValidationTypes":128,"./ValidationUtils":129}],128:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidationTypes = void 0;
@@ -4920,7 +5006,7 @@ ValidationTypes.CONDITIONAL_VALIDATION = 'conditionalValidation'; // done
 ValidationTypes.WHITELIST = 'whitelistValidation'; // done
 ValidationTypes.IS_DEFINED = 'isDefined'; // done
 
-},{}],128:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ValidationUtils = exports.constraintToString = void 0;
@@ -4962,7 +5048,7 @@ class ValidationUtils {
 }
 exports.ValidationUtils = ValidationUtils;
 
-},{}],129:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Validator = void 0;
@@ -5019,15 +5105,15 @@ class Validator {
 }
 exports.Validator = Validator;
 
-},{"./ValidationExecutor":126}],130:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-
-},{}],131:[function(require,module,exports){
+},{"./ValidationExecutor":127}],131:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 
 },{}],132:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+
+},{}],133:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -5540,7 +5626,7 @@ var AsYouType = /*#__PURE__*/function () {
 
 exports["default"] = AsYouType;
 
-},{"./AsYouTypeFormatter.js":136,"./AsYouTypeParser.js":138,"./AsYouTypeState.js":139,"./PhoneNumber.js":141,"./helpers/getCountryByCallingCode.js":174,"./metadata.js":188}],133:[function(require,module,exports){
+},{"./AsYouTypeFormatter.js":137,"./AsYouTypeParser.js":139,"./AsYouTypeState.js":140,"./PhoneNumber.js":142,"./helpers/getCountryByCallingCode.js":175,"./metadata.js":189}],134:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -5805,7 +5891,7 @@ function _match(characters, tree, last) {
   }
 }
 
-},{"./AsYouTypeFormatter.PatternParser.js":134}],134:[function(require,module,exports){
+},{"./AsYouTypeFormatter.PatternParser.js":135}],135:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -6047,7 +6133,7 @@ function expandSingleElementArray(array) {
   return array;
 }
 
-},{}],135:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -6181,7 +6267,7 @@ function isValidFormattedNationalNumber(formattedNationalNumber, state) {
   return (0, _parseDigits["default"])(formattedNationalNumber) === state.getNationalDigits();
 }
 
-},{"./helpers/checkNumberLength.js":166,"./helpers/formatNationalNumberUsingFormat.js":173,"./helpers/parseDigits.js":180}],136:[function(require,module,exports){
+},{"./helpers/checkNumberLength.js":167,"./helpers/formatNationalNumberUsingFormat.js":174,"./helpers/parseDigits.js":181}],137:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -6956,7 +7042,7 @@ var AsYouTypeFormatter = /*#__PURE__*/function () {
 
 exports["default"] = AsYouTypeFormatter;
 
-},{"./AsYouTypeFormatter.PatternMatcher.js":133,"./AsYouTypeFormatter.complete.js":135,"./AsYouTypeFormatter.util.js":137,"./constants.js":143,"./helpers/applyInternationalSeparatorStyle.js":165,"./helpers/formatNationalNumberUsingFormat.js":173,"./helpers/parseDigits.js":180}],137:[function(require,module,exports){
+},{"./AsYouTypeFormatter.PatternMatcher.js":134,"./AsYouTypeFormatter.complete.js":136,"./AsYouTypeFormatter.util.js":138,"./constants.js":144,"./helpers/applyInternationalSeparatorStyle.js":166,"./helpers/formatNationalNumberUsingFormat.js":174,"./helpers/parseDigits.js":181}],138:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7098,7 +7184,7 @@ function populateTemplateWithDigits(template, position, digits) {
   return [template, position];
 }
 
-},{}],138:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7623,7 +7709,7 @@ function extractFormattedDigitsAndPlus(text) {
   return [formattedDigits, hasPlus];
 }
 
-},{"./constants.js":143,"./helpers/extractCountryCallingCode.js":169,"./helpers/extractCountryCallingCodeFromInternationalNumberWithoutPlusSign.js":170,"./helpers/extractNationalNumberFromPossiblyIncompleteNumber.js":172,"./helpers/parseDigits.js":180,"./helpers/stripIddPrefix.js":181}],139:[function(require,module,exports){
+},{"./constants.js":144,"./helpers/extractCountryCallingCode.js":170,"./helpers/extractCountryCallingCodeFromInternationalNumberWithoutPlusSign.js":171,"./helpers/extractNationalNumberFromPossiblyIncompleteNumber.js":173,"./helpers/parseDigits.js":181,"./helpers/stripIddPrefix.js":182}],140:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7749,7 +7835,7 @@ var AsYouTypeState = /*#__PURE__*/function () {
 
 exports["default"] = AsYouTypeState;
 
-},{}],140:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -7813,7 +7899,7 @@ var ParseError = /*#__PURE__*/function (_Error) {
 
 exports["default"] = ParseError;
 
-},{}],141:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7967,7 +8053,7 @@ var isCountryCode = function isCountryCode(value) {
   return /^[A-Z]{2}$/.test(value);
 };
 
-},{"./format_.js":159,"./helpers/getNumberType.js":176,"./isPossibleNumber_.js":183,"./isValidNumberForRegion_.js":186,"./metadata.js":188,"./validate_.js":201}],142:[function(require,module,exports){
+},{"./format_.js":160,"./helpers/getNumberType.js":177,"./isPossibleNumber_.js":184,"./isValidNumberForRegion_.js":187,"./metadata.js":189,"./validate_.js":202}],143:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -8356,7 +8442,7 @@ var PhoneNumberMatcher = /*#__PURE__*/function () {
 
 exports["default"] = PhoneNumberMatcher;
 
-},{"./PhoneNumber.js":141,"./constants.js":143,"./findNumbers/Leniency.js":146,"./findNumbers/RegExpCache.js":147,"./findNumbers/isValidCandidate.js":148,"./findNumbers/isValidPreCandidate.js":149,"./findNumbers/parsePreCandidate.js":150,"./findNumbers/utf-8.js":151,"./findNumbers/util.js":152,"./helpers/extension/createExtensionPattern.js":167,"./metadata.js":188,"./parse_.js":195}],143:[function(require,module,exports){
+},{"./PhoneNumber.js":142,"./constants.js":144,"./findNumbers/Leniency.js":147,"./findNumbers/RegExpCache.js":148,"./findNumbers/isValidCandidate.js":149,"./findNumbers/isValidPreCandidate.js":150,"./findNumbers/parsePreCandidate.js":151,"./findNumbers/utf-8.js":152,"./findNumbers/util.js":153,"./helpers/extension/createExtensionPattern.js":168,"./metadata.js":189,"./parse_.js":196}],144:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8396,7 +8482,7 @@ var PLUS_CHARS = "+\uFF0B"; // const LEADING_PLUS_CHARS_PATTERN = new RegExp('^[
 
 exports.PLUS_CHARS = PLUS_CHARS;
 
-},{}],144:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8419,7 +8505,7 @@ function findNumbers() {
   return (0, _findNumbers_["default"])(text, options, metadata);
 }
 
-},{"./findNumbers_.js":153,"./parsePhoneNumber.js":191}],145:[function(require,module,exports){
+},{"./findNumbers_.js":154,"./parsePhoneNumber.js":192}],146:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8554,7 +8640,7 @@ var LRUCache = /*#__PURE__*/function () {
 
 exports["default"] = LRUCache;
 
-},{}],146:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8890,7 +8976,7 @@ function allNumberGroupsRemainGrouped(metadata, number, normalizedCandidate, for
   return normalizedCandidate.slice(fromIndex).contains(number.getExtension());
 }
 
-},{"../helpers/parseDigits.js":180,"../validate_.js":201,"./util.js":152}],147:[function(require,module,exports){
+},{"../helpers/parseDigits.js":181,"../validate_.js":202,"./util.js":153}],148:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8938,7 +9024,7 @@ var RegExpCache = /*#__PURE__*/function () {
 
 exports["default"] = RegExpCache;
 
-},{"./LRUCache.js":145}],148:[function(require,module,exports){
+},{"./LRUCache.js":146}],149:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9019,7 +9105,7 @@ function isValidCandidate(candidate, offset, text, leniency) {
   return true;
 }
 
-},{"../constants.js":143,"./utf-8.js":151,"./util.js":152}],149:[function(require,module,exports){
+},{"../constants.js":144,"./utf-8.js":152,"./util.js":153}],150:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9054,7 +9140,7 @@ function isValidPreCandidate(candidate, offset, text) {
   return true;
 }
 
-},{}],150:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9081,7 +9167,7 @@ function parsePreCandidate(candidate) {
   return (0, _util.trimAfterFirstMatch)(SECOND_NUMBER_START_PATTERN, candidate);
 }
 
-},{"./util.js":152}],151:[function(require,module,exports){
+},{"./util.js":153}],152:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9158,7 +9244,7 @@ function isInvalidPunctuationSymbol(character) {
   return character === '%' || pSc_regexp.test(character);
 }
 
-},{}],152:[function(require,module,exports){
+},{}],153:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9201,7 +9287,7 @@ function endsWith(string, substring) {
   return string.indexOf(substring, string.length - substring.length) === string.length - substring.length;
 }
 
-},{}],153:[function(require,module,exports){
+},{}],154:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9224,7 +9310,7 @@ function findNumbers(text, options, metadata) {
   return results;
 }
 
-},{"./PhoneNumberMatcher.js":142}],154:[function(require,module,exports){
+},{"./PhoneNumberMatcher.js":143}],155:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -9267,7 +9353,7 @@ function searchPhoneNumbers() {
   return (0, _findPhoneNumbers_.searchPhoneNumbers)(text, options, metadata);
 }
 
-},{"./findPhoneNumbers_.js":156,"./parsePhoneNumber.js":191}],155:[function(require,module,exports){
+},{"./findPhoneNumbers_.js":157,"./parsePhoneNumber.js":192}],156:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9337,7 +9423,7 @@ var is_object = function is_object(_) {
   return _typeof(_) === 'object';
 };
 
-},{"./findNumbers.js":144}],156:[function(require,module,exports){
+},{"./findNumbers.js":145}],157:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9560,7 +9646,7 @@ var PhoneNumberSearch = /*#__PURE__*/function () {
 
 exports.PhoneNumberSearch = PhoneNumberSearch;
 
-},{"./constants.js":143,"./findNumbers/isValidCandidate.js":148,"./findNumbers/isValidPreCandidate.js":149,"./findNumbers/parsePreCandidate.js":150,"./helpers/extension/createExtensionPattern.js":167,"./helpers/isViablePhoneNumber.js":177,"./parse_.js":195}],157:[function(require,module,exports){
+},{"./constants.js":144,"./findNumbers/isValidCandidate.js":149,"./findNumbers/isValidPreCandidate.js":150,"./findNumbers/parsePreCandidate.js":151,"./helpers/extension/createExtensionPattern.js":168,"./helpers/isViablePhoneNumber.js":178,"./parse_.js":196}],158:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9689,7 +9775,7 @@ var is_object = function is_object(_) {
   return _typeof(_) === 'object';
 };
 
-},{"./format_.js":159,"./parse_.js":195}],158:[function(require,module,exports){
+},{"./format_.js":160,"./parse_.js":196}],159:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9718,7 +9804,7 @@ function formatIncompletePhoneNumber(value, country, metadata) {
   return new _AsYouType["default"](country, metadata).input(value);
 }
 
-},{"./AsYouType.js":132}],159:[function(require,module,exports){
+},{"./AsYouType.js":133}],160:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -9922,7 +10008,7 @@ function formatIDD(nationalNumber, carrierCode, countryCallingCode, fromCountry,
   }
 }
 
-},{"./helpers/RFC3966.js":164,"./helpers/formatNationalNumberUsingFormat.js":173,"./helpers/getIddPrefix.js":175,"./helpers/matchesEntirely.js":178,"./metadata.js":188}],160:[function(require,module,exports){
+},{"./helpers/RFC3966.js":165,"./helpers/formatNationalNumberUsingFormat.js":174,"./helpers/getIddPrefix.js":176,"./helpers/matchesEntirely.js":179,"./metadata.js":189}],161:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9938,7 +10024,7 @@ function getCountries(metadata) {
   return new _metadata["default"](metadata).getCountries();
 }
 
-},{"./metadata.js":188}],161:[function(require,module,exports){
+},{"./metadata.js":189}],162:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9953,7 +10039,7 @@ Object.defineProperty(exports, "default", {
 
 var _metadata = require("./metadata.js");
 
-},{"./metadata.js":188}],162:[function(require,module,exports){
+},{"./metadata.js":189}],163:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9971,7 +10057,7 @@ function getExampleNumber(country, examples, metadata) {
   }
 }
 
-},{"./PhoneNumber.js":141}],163:[function(require,module,exports){
+},{"./PhoneNumber.js":142}],164:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10100,7 +10186,7 @@ var is_object = function is_object(_) {
   return _typeof(_) === 'object';
 };
 
-},{"./helpers/getNumberType.js":176,"./helpers/isViablePhoneNumber.js":177,"./parse_.js":195}],164:[function(require,module,exports){
+},{"./helpers/getNumberType.js":177,"./helpers/isViablePhoneNumber.js":178,"./parse_.js":196}],165:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10203,7 +10289,7 @@ function formatRFC3966(_ref) {
   return "tel:".concat(number).concat(ext ? ';ext=' + ext : '');
 }
 
-},{"./isViablePhoneNumber.js":177}],165:[function(require,module,exports){
+},{"./isViablePhoneNumber.js":178}],166:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10247,7 +10333,7 @@ function applyInternationalSeparatorStyle(formattedNumber) {
   return formattedNumber.replace(new RegExp("[".concat(_constants.VALID_PUNCTUATION, "]+"), 'g'), ' ').trim();
 }
 
-},{"../constants.js":143}],166:[function(require,module,exports){
+},{"../constants.js":144}],167:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10340,7 +10426,7 @@ function checkNumberLengthForType(nationalNumber, type, metadata) {
   return possible_lengths.indexOf(actual_length, 1) >= 0 ? 'IS_POSSIBLE' : 'INVALID_LENGTH';
 }
 
-},{"./mergeArrays.js":179}],167:[function(require,module,exports){
+},{"./mergeArrays.js":180}],168:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10457,7 +10543,7 @@ function createExtensionPattern(purpose) {
   return rfcExtn + "|" + explicitExtn + "|" + ambiguousExtn + "|" + americanStyleExtnWithSuffix + "|" + autoDiallingExtn + "|" + onlyCommasExtn;
 }
 
-},{"../../constants.js":143}],168:[function(require,module,exports){
+},{"../../constants.js":144}],169:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10500,7 +10586,7 @@ function extractExtension(number) {
   }
 }
 
-},{"./createExtensionPattern.js":167}],169:[function(require,module,exports){
+},{"./createExtensionPattern.js":168}],170:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10615,7 +10701,7 @@ function extractCountryCallingCode(number, country, callingCode, metadata) {
   return {};
 }
 
-},{"../constants.js":143,"../metadata.js":188,"./extractCountryCallingCodeFromInternationalNumberWithoutPlusSign.js":170,"./stripIddPrefix.js":181}],170:[function(require,module,exports){
+},{"../constants.js":144,"../metadata.js":189,"./extractCountryCallingCodeFromInternationalNumberWithoutPlusSign.js":171,"./stripIddPrefix.js":182}],171:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10679,7 +10765,7 @@ function extractCountryCallingCodeFromInternationalNumberWithoutPlusSign(number,
   };
 }
 
-},{"../getCountryCallingCode.js":161,"../metadata.js":188,"./checkNumberLength.js":166,"./extractNationalNumber.js":171,"./matchesEntirely.js":178}],171:[function(require,module,exports){
+},{"../getCountryCallingCode.js":162,"../metadata.js":189,"./checkNumberLength.js":167,"./extractNationalNumber.js":172,"./matchesEntirely.js":179}],172:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10803,7 +10889,7 @@ function isPossibleIncompleteNationalNumber(nationalNumber, metadata) {
   }
 }
 
-},{"./checkNumberLength.js":166,"./extractNationalNumberFromPossiblyIncompleteNumber.js":172,"./matchesEntirely.js":178}],172:[function(require,module,exports){
+},{"./checkNumberLength.js":167,"./extractNationalNumberFromPossiblyIncompleteNumber.js":173,"./matchesEntirely.js":179}],173:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10918,7 +11004,7 @@ function extractNationalNumberFromPossiblyIncompleteNumber(number, metadata) {
   };
 }
 
-},{}],173:[function(require,module,exports){
+},{}],174:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10965,7 +11051,7 @@ function formatNationalNumberUsingFormat(number, format, _ref) {
   return formattedNumber;
 }
 
-},{"./applyInternationalSeparatorStyle.js":165}],174:[function(require,module,exports){
+},{"./applyInternationalSeparatorStyle.js":166}],175:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11037,7 +11123,7 @@ function selectCountryFromList(possibleCountries, nationalPhoneNumber, metadata)
   }
 }
 
-},{"../metadata.js":188,"./getNumberType.js":176}],175:[function(require,module,exports){
+},{"../metadata.js":189,"./getNumberType.js":177}],176:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11074,7 +11160,7 @@ function getIddPrefix(country, callingCode, metadata) {
   }
 }
 
-},{"../metadata.js":188}],176:[function(require,module,exports){
+},{"../metadata.js":189}],177:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11178,7 +11264,7 @@ function isNumberTypeEqualTo(nationalNumber, type, metadata) {
   return (0, _matchesEntirely["default"])(nationalNumber, type.pattern());
 }
 
-},{"../metadata.js":188,"./matchesEntirely.js":178}],177:[function(require,module,exports){
+},{"../metadata.js":189,"./matchesEntirely.js":179}],178:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11264,7 +11350,7 @@ function isViablePhoneNumberStart(number) {
   return VALID_PHONE_NUMBER_START_REG_EXP.test(number);
 }
 
-},{"../constants.js":143,"./extension/createExtensionPattern.js":167}],178:[function(require,module,exports){
+},{"../constants.js":144,"./extension/createExtensionPattern.js":168}],179:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11284,7 +11370,7 @@ function matchesEntirely(text, regular_expression) {
   return new RegExp('^(?:' + regular_expression + ')$').test(text);
 }
 
-},{}],179:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11325,7 +11411,7 @@ function mergeArrays(a, b) {
   // return Array.from(merged).sort((a, b) => a - b)
 }
 
-},{}],180:[function(require,module,exports){
+},{}],181:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11459,7 +11545,7 @@ function parseDigits(string) {
   return result;
 }
 
-},{}],181:[function(require,module,exports){
+},{}],182:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11506,7 +11592,7 @@ function stripIddPrefix(number, country, callingCode, metadata) {
   return number;
 }
 
-},{"../constants.js":143,"../metadata.js":188}],182:[function(require,module,exports){
+},{"../constants.js":144,"../metadata.js":189}],183:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11543,7 +11629,7 @@ function isPossibleNumber() {
   return (0, _isPossibleNumber_["default"])(input, options, metadata);
 }
 
-},{"./getNumberType.js":163,"./isPossibleNumber_.js":183}],183:[function(require,module,exports){
+},{"./getNumberType.js":164,"./isPossibleNumber_.js":184}],184:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11627,7 +11713,7 @@ function isPossibleNumber(nationalNumber, metadata) {
   }
 }
 
-},{"./helpers/checkNumberLength.js":166,"./metadata.js":188}],184:[function(require,module,exports){
+},{"./helpers/checkNumberLength.js":167,"./metadata.js":189}],185:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11660,7 +11746,7 @@ function isPossiblePhoneNumber() {
   return phoneNumber && phoneNumber.isPossible() || false;
 }
 
-},{"./parsePhoneNumber.js":191,"./parsePhoneNumberFromString_.js":193}],185:[function(require,module,exports){
+},{"./parsePhoneNumber.js":192,"./parsePhoneNumberFromString_.js":194}],186:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11703,7 +11789,7 @@ function isValidNumberForRegion(number, country, metadata) {
   return (0, _isValidNumberForRegion_["default"])(input, country, undefined, metadata);
 }
 
-},{"./helpers/isViablePhoneNumber.js":177,"./isValidNumberForRegion_.js":186,"./parse_.js":195}],186:[function(require,module,exports){
+},{"./helpers/isViablePhoneNumber.js":178,"./isValidNumberForRegion_.js":187,"./parse_.js":196}],187:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11727,7 +11813,7 @@ function isValidNumberForRegion(input, country, options, metadata) {
   return input.country === country && (0, _validate_["default"])(input, options, metadata);
 }
 
-},{"./validate_.js":201}],187:[function(require,module,exports){
+},{"./validate_.js":202}],188:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -11760,7 +11846,7 @@ function isValidPhoneNumber() {
   return phoneNumber && phoneNumber.isValid() || false;
 }
 
-},{"./parsePhoneNumber.js":191,"./parsePhoneNumberFromString_.js":193}],188:[function(require,module,exports){
+},{"./parsePhoneNumber.js":192,"./parsePhoneNumberFromString_.js":194}],189:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12440,7 +12526,7 @@ function setVersion(metadata) {
 // 	return ISO_COUNTRY_CODE.test(countryCodeOrCountryCallingCode)
 // }
 
-},{"./tools/semver-compare.js":198}],189:[function(require,module,exports){
+},{"./tools/semver-compare.js":199}],190:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12489,7 +12575,7 @@ function parseNumber() {
   return (0, _parse_["default"])(text, options, metadata);
 }
 
-},{"./parsePhoneNumber.js":191,"./parse_.js":195}],190:[function(require,module,exports){
+},{"./parsePhoneNumber.js":192,"./parse_.js":196}],191:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12565,7 +12651,7 @@ function parsePhoneNumberCharacter(character, prevParsedCharacters) {
   return (0, _parseDigits.parseDigit)(character);
 }
 
-},{"./helpers/parseDigits.js":180}],191:[function(require,module,exports){
+},{"./helpers/parseDigits.js":181}],192:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12665,7 +12751,7 @@ var isObject = function isObject(_) {
   return _typeof(_) === 'object';
 };
 
-},{"./parsePhoneNumber_.js":194}],192:[function(require,module,exports){
+},{"./parsePhoneNumber_.js":195}],193:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12688,7 +12774,7 @@ function parsePhoneNumberFromString() {
   return (0, _parsePhoneNumberFromString_["default"])(text, options, metadata);
 }
 
-},{"./parsePhoneNumber.js":191,"./parsePhoneNumberFromString_.js":193}],193:[function(require,module,exports){
+},{"./parsePhoneNumber.js":192,"./parsePhoneNumberFromString_.js":194}],194:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12730,7 +12816,7 @@ function parsePhoneNumberFromString(text, options, metadata) {
   }
 }
 
-},{"./ParseError.js":140,"./metadata.js":188,"./parsePhoneNumber_.js":194}],194:[function(require,module,exports){
+},{"./ParseError.js":141,"./metadata.js":189,"./parsePhoneNumber_.js":195}],195:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12754,7 +12840,7 @@ function parsePhoneNumber(text, options, metadata) {
   }), metadata);
 }
 
-},{"./parse_.js":195}],195:[function(require,module,exports){
+},{"./parse_.js":196}],196:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -13126,7 +13212,7 @@ function parsePhoneNumber(formattedPhoneNumber, defaultCountry, defaultCallingCo
   };
 }
 
-},{"./ParseError.js":140,"./PhoneNumber.js":141,"./constants.js":143,"./getCountryCallingCode.js":161,"./helpers/RFC3966.js":164,"./helpers/extension/extractExtension.js":168,"./helpers/extractCountryCallingCode.js":169,"./helpers/extractCountryCallingCodeFromInternationalNumberWithoutPlusSign.js":170,"./helpers/extractNationalNumber.js":171,"./helpers/getCountryByCallingCode.js":174,"./helpers/isViablePhoneNumber.js":177,"./helpers/matchesEntirely.js":178,"./helpers/stripIddPrefix.js":181,"./isPossibleNumber_.js":183,"./metadata.js":188,"./parseIncompletePhoneNumber.js":190}],196:[function(require,module,exports){
+},{"./ParseError.js":141,"./PhoneNumber.js":142,"./constants.js":144,"./getCountryCallingCode.js":162,"./helpers/RFC3966.js":165,"./helpers/extension/extractExtension.js":169,"./helpers/extractCountryCallingCode.js":170,"./helpers/extractCountryCallingCodeFromInternationalNumberWithoutPlusSign.js":171,"./helpers/extractNationalNumber.js":172,"./helpers/getCountryByCallingCode.js":175,"./helpers/isViablePhoneNumber.js":178,"./helpers/matchesEntirely.js":179,"./helpers/stripIddPrefix.js":182,"./isPossibleNumber_.js":184,"./metadata.js":189,"./parseIncompletePhoneNumber.js":191}],197:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13170,7 +13256,7 @@ function searchNumbers() {
   });
 }
 
-},{"./PhoneNumberMatcher.js":142,"./parsePhoneNumber.js":191}],197:[function(require,module,exports){
+},{"./PhoneNumberMatcher.js":143,"./parsePhoneNumber.js":192}],198:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13189,7 +13275,7 @@ function searchPhoneNumbersInText(text, defaultCountry, options, metadata) {
   return (0, _searchNumbers["default"])(text, args.options, args.metadata);
 }
 
-},{"./findPhoneNumbersInText.js":155,"./searchNumbers.js":196}],198:[function(require,module,exports){
+},{"./findPhoneNumbersInText.js":156,"./searchNumbers.js":197}],199:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13227,7 +13313,7 @@ function _default(a, b) {
   return !a[1] && b[1] ? 1 : a[1] && !b[1] ? -1 : 0;
 }
 
-},{}],199:[function(require,module,exports){
+},{}],200:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13251,7 +13337,7 @@ function isValidNumber() {
   return (0, _validate_["default"])(input, options, metadata);
 }
 
-},{"./getNumberType.js":163,"./validate_.js":201}],200:[function(require,module,exports){
+},{"./getNumberType.js":164,"./validate_.js":202}],201:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13306,7 +13392,7 @@ function validatePhoneNumberLength() {
   }
 }
 
-},{"./ParseError.js":140,"./helpers/checkNumberLength.js":166,"./metadata.js":188,"./parsePhoneNumber.js":191,"./parsePhoneNumber_.js":194}],201:[function(require,module,exports){
+},{"./ParseError.js":141,"./helpers/checkNumberLength.js":167,"./metadata.js":189,"./parsePhoneNumber.js":192,"./parsePhoneNumber_.js":195}],202:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13375,7 +13461,7 @@ function isValidNumber(input, options, metadata) {
   return (0, _matchesEntirely["default"])(national_number, metadata.nationalNumberPattern());
 }
 
-},{"./helpers/getNumberType.js":176,"./helpers/matchesEntirely.js":178,"./metadata.js":188}],202:[function(require,module,exports){
+},{"./helpers/getNumberType.js":177,"./helpers/matchesEntirely.js":179,"./metadata.js":189}],203:[function(require,module,exports){
 'use strict'
 
 var parsePhoneNumberFromString = require('../build/parsePhoneNumberFromString.js').default
@@ -13426,7 +13512,7 @@ exports.DIGIT_PLACEHOLDER = require('../build/AsYouTypeFormatter.js').DIGIT_PLAC
 
 exports.parseRFC3966 = require('../build/helpers/RFC3966.js').parseRFC3966
 exports.formatRFC3966 = require('../build/helpers/RFC3966.js').formatRFC3966
-},{"../build/AsYouType.js":132,"../build/AsYouTypeFormatter.js":136,"../build/ParseError.js":140,"../build/PhoneNumberMatcher.js":142,"../build/findNumbers.js":144,"../build/findPhoneNumbersInText.js":155,"../build/formatIncompletePhoneNumber.js":158,"../build/getCountries.js":160,"../build/getExampleNumber.js":162,"../build/helpers/RFC3966.js":164,"../build/helpers/parseDigits.js":180,"../build/isPossiblePhoneNumber.js":184,"../build/isValidPhoneNumber.js":187,"../build/metadata.js":188,"../build/parseIncompletePhoneNumber.js":190,"../build/parsePhoneNumber.js":191,"../build/parsePhoneNumberFromString.js":192,"../build/searchNumbers.js":196,"../build/searchPhoneNumbersInText.js":197,"../build/validatePhoneNumberLength.js":200}],203:[function(require,module,exports){
+},{"../build/AsYouType.js":133,"../build/AsYouTypeFormatter.js":137,"../build/ParseError.js":141,"../build/PhoneNumberMatcher.js":143,"../build/findNumbers.js":145,"../build/findPhoneNumbersInText.js":156,"../build/formatIncompletePhoneNumber.js":159,"../build/getCountries.js":161,"../build/getExampleNumber.js":163,"../build/helpers/RFC3966.js":165,"../build/helpers/parseDigits.js":181,"../build/isPossiblePhoneNumber.js":185,"../build/isValidPhoneNumber.js":188,"../build/metadata.js":189,"../build/parseIncompletePhoneNumber.js":191,"../build/parsePhoneNumber.js":192,"../build/parsePhoneNumberFromString.js":193,"../build/searchNumbers.js":197,"../build/searchPhoneNumbersInText.js":198,"../build/validatePhoneNumberLength.js":201}],204:[function(require,module,exports){
 'use strict'
 
 var min = require('./min/index.cjs')
@@ -13551,9 +13637,9 @@ exports.formatIncompletePhoneNumber = min.formatIncompletePhoneNumber
 exports.parseIncompletePhoneNumber = min.parseIncompletePhoneNumber
 exports.parsePhoneNumberCharacter = min.parsePhoneNumberCharacter
 exports.parseDigits = min.parseDigits
-},{"./build/findPhoneNumbers.js":154,"./build/findPhoneNumbers_.js":156,"./build/format.js":157,"./build/getNumberType.js":163,"./build/helpers/parseDigits.js":180,"./build/isPossibleNumber.js":182,"./build/isValidNumberForRegion.js":185,"./build/parse.js":189,"./build/validate.js":199,"./metadata.min.json":204,"./min/index.cjs":205}],204:[function(require,module,exports){
+},{"./build/findPhoneNumbers.js":155,"./build/findPhoneNumbers_.js":157,"./build/format.js":158,"./build/getNumberType.js":164,"./build/helpers/parseDigits.js":181,"./build/isPossibleNumber.js":183,"./build/isValidNumberForRegion.js":186,"./build/parse.js":190,"./build/validate.js":200,"./metadata.min.json":205,"./min/index.cjs":206}],205:[function(require,module,exports){
 module.exports={"version":4,"country_calling_codes":{"1":["US","AG","AI","AS","BB","BM","BS","CA","DM","DO","GD","GU","JM","KN","KY","LC","MP","MS","PR","SX","TC","TT","VC","VG","VI"],"7":["RU","KZ"],"20":["EG"],"27":["ZA"],"30":["GR"],"31":["NL"],"32":["BE"],"33":["FR"],"34":["ES"],"36":["HU"],"39":["IT","VA"],"40":["RO"],"41":["CH"],"43":["AT"],"44":["GB","GG","IM","JE"],"45":["DK"],"46":["SE"],"47":["NO","SJ"],"48":["PL"],"49":["DE"],"51":["PE"],"52":["MX"],"53":["CU"],"54":["AR"],"55":["BR"],"56":["CL"],"57":["CO"],"58":["VE"],"60":["MY"],"61":["AU","CC","CX"],"62":["ID"],"63":["PH"],"64":["NZ"],"65":["SG"],"66":["TH"],"81":["JP"],"82":["KR"],"84":["VN"],"86":["CN"],"90":["TR"],"91":["IN"],"92":["PK"],"93":["AF"],"94":["LK"],"95":["MM"],"98":["IR"],"211":["SS"],"212":["MA","EH"],"213":["DZ"],"216":["TN"],"218":["LY"],"220":["GM"],"221":["SN"],"222":["MR"],"223":["ML"],"224":["GN"],"225":["CI"],"226":["BF"],"227":["NE"],"228":["TG"],"229":["BJ"],"230":["MU"],"231":["LR"],"232":["SL"],"233":["GH"],"234":["NG"],"235":["TD"],"236":["CF"],"237":["CM"],"238":["CV"],"239":["ST"],"240":["GQ"],"241":["GA"],"242":["CG"],"243":["CD"],"244":["AO"],"245":["GW"],"246":["IO"],"247":["AC"],"248":["SC"],"249":["SD"],"250":["RW"],"251":["ET"],"252":["SO"],"253":["DJ"],"254":["KE"],"255":["TZ"],"256":["UG"],"257":["BI"],"258":["MZ"],"260":["ZM"],"261":["MG"],"262":["RE","YT"],"263":["ZW"],"264":["NA"],"265":["MW"],"266":["LS"],"267":["BW"],"268":["SZ"],"269":["KM"],"290":["SH","TA"],"291":["ER"],"297":["AW"],"298":["FO"],"299":["GL"],"350":["GI"],"351":["PT"],"352":["LU"],"353":["IE"],"354":["IS"],"355":["AL"],"356":["MT"],"357":["CY"],"358":["FI","AX"],"359":["BG"],"370":["LT"],"371":["LV"],"372":["EE"],"373":["MD"],"374":["AM"],"375":["BY"],"376":["AD"],"377":["MC"],"378":["SM"],"380":["UA"],"381":["RS"],"382":["ME"],"383":["XK"],"385":["HR"],"386":["SI"],"387":["BA"],"389":["MK"],"420":["CZ"],"421":["SK"],"423":["LI"],"500":["FK"],"501":["BZ"],"502":["GT"],"503":["SV"],"504":["HN"],"505":["NI"],"506":["CR"],"507":["PA"],"508":["PM"],"509":["HT"],"590":["GP","BL","MF"],"591":["BO"],"592":["GY"],"593":["EC"],"594":["GF"],"595":["PY"],"596":["MQ"],"597":["SR"],"598":["UY"],"599":["CW","BQ"],"670":["TL"],"672":["NF"],"673":["BN"],"674":["NR"],"675":["PG"],"676":["TO"],"677":["SB"],"678":["VU"],"679":["FJ"],"680":["PW"],"681":["WF"],"682":["CK"],"683":["NU"],"685":["WS"],"686":["KI"],"687":["NC"],"688":["TV"],"689":["PF"],"690":["TK"],"691":["FM"],"692":["MH"],"850":["KP"],"852":["HK"],"853":["MO"],"855":["KH"],"856":["LA"],"880":["BD"],"886":["TW"],"960":["MV"],"961":["LB"],"962":["JO"],"963":["SY"],"964":["IQ"],"965":["KW"],"966":["SA"],"967":["YE"],"968":["OM"],"970":["PS"],"971":["AE"],"972":["IL"],"973":["BH"],"974":["QA"],"975":["BT"],"976":["MN"],"977":["NP"],"992":["TJ"],"993":["TM"],"994":["AZ"],"995":["GE"],"996":["KG"],"998":["UZ"]},"countries":{"AC":["247","00","(?:[01589]\\d|[46])\\d{4}",[5,6]],"AD":["376","00","(?:1|6\\d)\\d{7}|[135-9]\\d{5}",[6,8,9],[["(\\d{3})(\\d{3})","$1 $2",["[135-9]"]],["(\\d{4})(\\d{4})","$1 $2",["1"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["6"]]]],"AE":["971","00","(?:[4-7]\\d|9[0-689])\\d{7}|800\\d{2,9}|[2-4679]\\d{7}",[5,6,7,8,9,10,11,12],[["(\\d{3})(\\d{2,9})","$1 $2",["60|8"]],["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["[236]|[479][2-8]"],"0$1"],["(\\d{3})(\\d)(\\d{5})","$1 $2 $3",["[479]"]],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["5"],"0$1"]],"0"],"AF":["93","00","[2-7]\\d{8}",[9],[["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[2-7]"],"0$1"]],"0"],"AG":["1","011","(?:268|[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([457]\\d{6})$","268$1",0,"268"],"AI":["1","011","(?:264|[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([2457]\\d{6})$","264$1",0,"264"],"AL":["355","00","(?:700\\d\\d|900)\\d{3}|8\\d{5,7}|(?:[2-5]|6\\d)\\d{7}",[6,7,8,9],[["(\\d{3})(\\d{3,4})","$1 $2",["80|9"],"0$1"],["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["4[2-6]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[2358][2-5]|4"],"0$1"],["(\\d{3})(\\d{5})","$1 $2",["[23578]"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["6"],"0$1"]],"0"],"AM":["374","00","(?:[1-489]\\d|55|60|77)\\d{6}",[8],[["(\\d{3})(\\d{2})(\\d{3})","$1 $2 $3",["[89]0"],"0 $1"],["(\\d{3})(\\d{5})","$1 $2",["2|3[12]"],"(0$1)"],["(\\d{2})(\\d{6})","$1 $2",["1|47"],"(0$1)"],["(\\d{2})(\\d{6})","$1 $2",["[3-9]"],"0$1"]],"0"],"AO":["244","00","[29]\\d{8}",[9],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[29]"]]]],"AR":["54","00","(?:11|[89]\\d\\d)\\d{8}|[2368]\\d{9}",[10,11],[["(\\d{4})(\\d{2})(\\d{4})","$1 $2-$3",["2(?:2[024-9]|3[0-59]|47|6[245]|9[02-8])|3(?:3[28]|4[03-9]|5[2-46-8]|7[1-578]|8[2-9])","2(?:[23]02|6(?:[25]|4[6-8])|9(?:[02356]|4[02568]|72|8[23]))|3(?:3[28]|4(?:[04679]|3[5-8]|5[4-68]|8[2379])|5(?:[2467]|3[237]|8[2-5])|7[1-578]|8(?:[2469]|3[2578]|5[4-8]|7[36-8]|8[5-8]))|2(?:2[24-9]|3[1-59]|47)","2(?:[23]02|6(?:[25]|4(?:64|[78]))|9(?:[02356]|4(?:[0268]|5[2-6])|72|8[23]))|3(?:3[28]|4(?:[04679]|3[78]|5(?:4[46]|8)|8[2379])|5(?:[2467]|3[237]|8[23])|7[1-578]|8(?:[2469]|3[278]|5[56][46]|86[3-6]))|2(?:2[24-9]|3[1-59]|47)|38(?:[58][78]|7[378])|3(?:4[35][56]|58[45]|8(?:[38]5|54|76))[4-6]","2(?:[23]02|6(?:[25]|4(?:64|[78]))|9(?:[02356]|4(?:[0268]|5[2-6])|72|8[23]))|3(?:3[28]|4(?:[04679]|3(?:5(?:4[0-25689]|[56])|[78])|58|8[2379])|5(?:[2467]|3[237]|8(?:[23]|4(?:[45]|60)|5(?:4[0-39]|5|64)))|7[1-578]|8(?:[2469]|3[278]|54(?:4|5[13-7]|6[89])|86[3-6]))|2(?:2[24-9]|3[1-59]|47)|38(?:[58][78]|7[378])|3(?:454|85[56])[46]|3(?:4(?:36|5[56])|8(?:[38]5|76))[4-6]"],"0$1",1],["(\\d{2})(\\d{4})(\\d{4})","$1 $2-$3",["1"],"0$1",1],["(\\d{3})(\\d{3})(\\d{4})","$1-$2-$3",["[68]"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2-$3",["[23]"],"0$1",1],["(\\d)(\\d{4})(\\d{2})(\\d{4})","$2 15-$3-$4",["9(?:2[2-469]|3[3-578])","9(?:2(?:2[024-9]|3[0-59]|47|6[245]|9[02-8])|3(?:3[28]|4[03-9]|5[2-46-8]|7[1-578]|8[2-9]))","9(?:2(?:[23]02|6(?:[25]|4[6-8])|9(?:[02356]|4[02568]|72|8[23]))|3(?:3[28]|4(?:[04679]|3[5-8]|5[4-68]|8[2379])|5(?:[2467]|3[237]|8[2-5])|7[1-578]|8(?:[2469]|3[2578]|5[4-8]|7[36-8]|8[5-8])))|92(?:2[24-9]|3[1-59]|47)","9(?:2(?:[23]02|6(?:[25]|4(?:64|[78]))|9(?:[02356]|4(?:[0268]|5[2-6])|72|8[23]))|3(?:3[28]|4(?:[04679]|3[78]|5(?:4[46]|8)|8[2379])|5(?:[2467]|3[237]|8[23])|7[1-578]|8(?:[2469]|3[278]|5(?:[56][46]|[78])|7[378]|8(?:6[3-6]|[78]))))|92(?:2[24-9]|3[1-59]|47)|93(?:4[35][56]|58[45]|8(?:[38]5|54|76))[4-6]","9(?:2(?:[23]02|6(?:[25]|4(?:64|[78]))|9(?:[02356]|4(?:[0268]|5[2-6])|72|8[23]))|3(?:3[28]|4(?:[04679]|3(?:5(?:4[0-25689]|[56])|[78])|5(?:4[46]|8)|8[2379])|5(?:[2467]|3[237]|8(?:[23]|4(?:[45]|60)|5(?:4[0-39]|5|64)))|7[1-578]|8(?:[2469]|3[278]|5(?:4(?:4|5[13-7]|6[89])|[56][46]|[78])|7[378]|8(?:6[3-6]|[78]))))|92(?:2[24-9]|3[1-59]|47)|93(?:4(?:36|5[56])|8(?:[38]5|76))[4-6]"],"0$1",0,"$1 $2 $3-$4"],["(\\d)(\\d{2})(\\d{4})(\\d{4})","$2 15-$3-$4",["91"],"0$1",0,"$1 $2 $3-$4"],["(\\d{3})(\\d{3})(\\d{5})","$1-$2-$3",["8"],"0$1"],["(\\d)(\\d{3})(\\d{3})(\\d{4})","$2 15-$3-$4",["9"],"0$1",0,"$1 $2 $3-$4"]],"0",0,"0?(?:(11|2(?:2(?:02?|[13]|2[13-79]|4[1-6]|5[2457]|6[124-8]|7[1-4]|8[13-6]|9[1267])|3(?:02?|1[467]|2[03-6]|3[13-8]|[49][2-6]|5[2-8]|[67])|4(?:7[3-578]|9)|6(?:[0136]|2[24-6]|4[6-8]?|5[15-8])|80|9(?:0[1-3]|[19]|2\\d|3[1-6]|4[02568]?|5[2-4]|6[2-46]|72?|8[23]?))|3(?:3(?:2[79]|6|8[2578])|4(?:0[0-24-9]|[12]|3[5-8]?|4[24-7]|5[4-68]?|6[02-9]|7[126]|8[2379]?|9[1-36-8])|5(?:1|2[1245]|3[237]?|4[1-46-9]|6[2-4]|7[1-6]|8[2-5]?)|6[24]|7(?:[069]|1[1568]|2[15]|3[145]|4[13]|5[14-8]|7[2-57]|8[126])|8(?:[01]|2[15-7]|3[2578]?|4[13-6]|5[4-8]?|6[1-357-9]|7[36-8]?|8[5-8]?|9[124])))15)?","9$1"],"AS":["1","011","(?:[58]\\d\\d|684|900)\\d{7}",[10],0,"1",0,"1|([267]\\d{6})$","684$1",0,"684"],"AT":["43","00","1\\d{3,12}|2\\d{6,12}|43(?:(?:0\\d|5[02-9])\\d{3,9}|2\\d{4,5}|[3467]\\d{4}|8\\d{4,6}|9\\d{4,7})|5\\d{4,12}|8\\d{7,12}|9\\d{8,12}|(?:[367]\\d|4[0-24-9])\\d{4,11}",[4,5,6,7,8,9,10,11,12,13],[["(\\d)(\\d{3,12})","$1 $2",["1(?:11|[2-9])"],"0$1"],["(\\d{3})(\\d{2})","$1 $2",["517"],"0$1"],["(\\d{2})(\\d{3,5})","$1 $2",["5[079]"],"0$1"],["(\\d{3})(\\d{3,10})","$1 $2",["(?:31|4)6|51|6(?:5[0-3579]|[6-9])|7(?:20|32|8)|[89]"],"0$1"],["(\\d{4})(\\d{3,9})","$1 $2",["[2-467]|5[2-6]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["5"],"0$1"],["(\\d{2})(\\d{4})(\\d{4,7})","$1 $2 $3",["5"],"0$1"]],"0"],"AU":["61","001[14-689]|14(?:1[14]|34|4[17]|[56]6|7[47]|88)0011","1(?:[0-79]\\d{7}(?:\\d(?:\\d{2})?)?|8[0-24-9]\\d{7})|[2-478]\\d{8}|1\\d{4,7}",[5,6,7,8,9,10,12],[["(\\d{2})(\\d{3,4})","$1 $2",["16"],"0$1"],["(\\d{2})(\\d{3})(\\d{2,4})","$1 $2 $3",["16"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["14|4"],"0$1"],["(\\d)(\\d{4})(\\d{4})","$1 $2 $3",["[2378]"],"(0$1)"],["(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3",["1(?:30|[89])"]]],"0",0,"0|(183[12])",0,0,0,[["(?:(?:2(?:[0-26-9]\\d|3[0-8]|4[02-9]|5[0135-9])|3(?:[0-3589]\\d|4[0-578]|6[1-9]|7[0-35-9])|7(?:[013-57-9]\\d|2[0-8]))\\d{3}|8(?:51(?:0(?:0[03-9]|[12479]\\d|3[2-9]|5[0-8]|6[1-9]|8[0-7])|1(?:[0235689]\\d|1[0-69]|4[0-589]|7[0-47-9])|2(?:0[0-79]|[18][13579]|2[14-9]|3[0-46-9]|[4-6]\\d|7[89]|9[0-4]))|(?:6[0-8]|[78]\\d)\\d{3}|9(?:[02-9]\\d{3}|1(?:(?:[0-58]\\d|6[0135-9])\\d|7(?:0[0-24-9]|[1-9]\\d)|9(?:[0-46-9]\\d|5[0-79])))))\\d{3}",[9]],["4(?:83[0-38]|93[0-6])\\d{5}|4(?:[0-3]\\d|4[047-9]|5[0-25-9]|6[06-9]|7[02-9]|8[0-24-9]|9[0-27-9])\\d{6}",[9]],["180(?:0\\d{3}|2)\\d{3}",[7,10]],["190[0-26]\\d{6}",[10]],0,0,0,["163\\d{2,6}",[5,6,7,8,9]],["14(?:5(?:1[0458]|[23][458])|71\\d)\\d{4}",[9]],["13(?:00\\d{6}(?:\\d{2})?|45[0-4]\\d{3})|13\\d{4}",[6,8,10,12]]],"0011"],"AW":["297","00","(?:[25-79]\\d\\d|800)\\d{4}",[7],[["(\\d{3})(\\d{4})","$1 $2",["[25-9]"]]]],"AX":["358","00|99(?:[01469]|5(?:[14]1|3[23]|5[59]|77|88|9[09]))","2\\d{4,9}|35\\d{4,5}|(?:60\\d\\d|800)\\d{4,6}|7\\d{5,11}|(?:[14]\\d|3[0-46-9]|50)\\d{4,8}",[5,6,7,8,9,10,11,12],0,"0",0,0,0,0,"18",0,"00"],"AZ":["994","00","365\\d{6}|(?:[124579]\\d|60|88)\\d{7}",[9],[["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["90"],"0$1"],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["1[28]|2|365|46","1[28]|2|365[45]|46","1[28]|2|365(?:4|5[02])|46"],"(0$1)"],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[13-9]"],"0$1"]],"0"],"BA":["387","00","6\\d{8}|(?:[35689]\\d|49|70)\\d{6}",[8,9],[["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["6[1-3]|[7-9]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2-$3",["[3-5]|6[56]"],"0$1"],["(\\d{2})(\\d{2})(\\d{2})(\\d{3})","$1 $2 $3 $4",["6"],"0$1"]],"0"],"BB":["1","011","(?:246|[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([2-9]\\d{6})$","246$1",0,"246"],"BD":["880","00","[1-469]\\d{9}|8[0-79]\\d{7,8}|[2-79]\\d{8}|[2-9]\\d{7}|[3-9]\\d{6}|[57-9]\\d{5}",[6,7,8,9,10],[["(\\d{2})(\\d{4,6})","$1-$2",["31[5-8]|[459]1"],"0$1"],["(\\d{3})(\\d{3,7})","$1-$2",["3(?:[67]|8[013-9])|4(?:6[168]|7|[89][18])|5(?:6[128]|9)|6(?:28|4[14]|5)|7[2-589]|8(?:0[014-9]|[12])|9[358]|(?:3[2-5]|4[235]|5[2-578]|6[0389]|76|8[3-7]|9[24])1|(?:44|66)[01346-9]"],"0$1"],["(\\d{4})(\\d{3,6})","$1-$2",["[13-9]|22"],"0$1"],["(\\d)(\\d{7,8})","$1-$2",["2"],"0$1"]],"0"],"BE":["32","00","4\\d{8}|[1-9]\\d{7}",[8,9],[["(\\d{3})(\\d{2})(\\d{3})","$1 $2 $3",["(?:80|9)0"],"0$1"],["(\\d)(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[239]|4[23]"],"0$1"],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[15-8]"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["4"],"0$1"]],"0"],"BF":["226","00","[025-7]\\d{7}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[025-7]"]]]],"BG":["359","00","[2-7]\\d{6,7}|[89]\\d{6,8}|2\\d{5}",[6,7,8,9],[["(\\d)(\\d)(\\d{2})(\\d{2})","$1 $2 $3 $4",["2"],"0$1"],["(\\d{3})(\\d{4})","$1 $2",["43[1-6]|70[1-9]"],"0$1"],["(\\d)(\\d{3})(\\d{3,4})","$1 $2 $3",["2"],"0$1"],["(\\d{2})(\\d{3})(\\d{2,3})","$1 $2 $3",["[356]|4[124-7]|7[1-9]|8[1-6]|9[1-7]"],"0$1"],["(\\d{3})(\\d{2})(\\d{3})","$1 $2 $3",["(?:70|8)0"],"0$1"],["(\\d{3})(\\d{3})(\\d{2})","$1 $2 $3",["43[1-7]|7"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[48]|9[08]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["9"],"0$1"]],"0"],"BH":["973","00","[136-9]\\d{7}",[8],[["(\\d{4})(\\d{4})","$1 $2",["[13679]|8[047]"]]]],"BI":["257","00","(?:[267]\\d|31)\\d{6}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[2367]"]]]],"BJ":["229","00","(?:[25689]\\d|40)\\d{6}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[24-689]"]]]],"BL":["590","00","(?:590|(?:69|80)\\d|976)\\d{6}",[9],0,"0",0,0,0,0,0,[["590(?:2[7-9]|5[12]|87)\\d{4}"],["69(?:0\\d\\d|1(?:2[2-9]|3[0-5]))\\d{4}"],["80[0-5]\\d{6}"],0,0,0,0,0,["976[01]\\d{5}"]]],"BM":["1","011","(?:441|[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([2-8]\\d{6})$","441$1",0,"441"],"BN":["673","00","[2-578]\\d{6}",[7],[["(\\d{3})(\\d{4})","$1 $2",["[2-578]"]]]],"BO":["591","00(?:1\\d)?","(?:[2-467]\\d\\d|8001)\\d{5}",[8,9],[["(\\d)(\\d{7})","$1 $2",["[23]|4[46]"]],["(\\d{8})","$1",["[67]"]],["(\\d{3})(\\d{2})(\\d{4})","$1 $2 $3",["8"]]],"0",0,"0(1\\d)?"],"BQ":["599","00","(?:[34]1|7\\d)\\d{5}",[7],0,0,0,0,0,0,"[347]"],"BR":["55","00(?:1[245]|2[1-35]|31|4[13]|[56]5|99)","(?:[1-46-9]\\d\\d|5(?:[0-46-9]\\d|5[0-46-9]))\\d{8}|[1-9]\\d{9}|[3589]\\d{8}|[34]\\d{7}",[8,9,10,11],[["(\\d{4})(\\d{4})","$1-$2",["300|4(?:0[02]|37)","4(?:02|37)0|[34]00"]],["(\\d{3})(\\d{2,3})(\\d{4})","$1 $2 $3",["(?:[358]|90)0"],"0$1"],["(\\d{2})(\\d{4})(\\d{4})","$1 $2-$3",["(?:[14689][1-9]|2[12478]|3[1-578]|5[13-5]|7[13-579])[2-57]"],"($1)"],["(\\d{2})(\\d{5})(\\d{4})","$1 $2-$3",["[16][1-9]|[2-57-9]"],"($1)"]],"0",0,"(?:0|90)(?:(1[245]|2[1-35]|31|4[13]|[56]5|99)(\\d{10,11}))?","$2"],"BS":["1","011","(?:242|[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([3-8]\\d{6})$","242$1",0,"242"],"BT":["975","00","[17]\\d{7}|[2-8]\\d{6}",[7,8],[["(\\d)(\\d{3})(\\d{3})","$1 $2 $3",["[2-68]|7[246]"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["1[67]|7"]]]],"BW":["267","00","(?:0800|(?:[37]|800)\\d)\\d{6}|(?:[2-6]\\d|90)\\d{5}",[7,8,10],[["(\\d{2})(\\d{5})","$1 $2",["90"]],["(\\d{3})(\\d{4})","$1 $2",["[24-6]|3[15-79]"]],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[37]"]],["(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3",["0"]],["(\\d{3})(\\d{4})(\\d{3})","$1 $2 $3",["8"]]]],"BY":["375","810","(?:[12]\\d|33|44|902)\\d{7}|8(?:0[0-79]\\d{5,7}|[1-7]\\d{9})|8(?:1[0-489]|[5-79]\\d)\\d{7}|8[1-79]\\d{6,7}|8[0-79]\\d{5}|8\\d{5}",[6,7,8,9,10,11],[["(\\d{3})(\\d{3})","$1 $2",["800"],"8 $1"],["(\\d{3})(\\d{2})(\\d{2,4})","$1 $2 $3",["800"],"8 $1"],["(\\d{4})(\\d{2})(\\d{3})","$1 $2-$3",["1(?:5[169]|6[3-5]|7[179])|2(?:1[35]|2[34]|3[3-5])","1(?:5[169]|6(?:3[1-3]|4|5[125])|7(?:1[3-9]|7[0-24-6]|9[2-7]))|2(?:1[35]|2[34]|3[3-5])"],"8 0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2-$3-$4",["1(?:[56]|7[467])|2[1-3]"],"8 0$1"],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2-$3-$4",["[1-4]"],"8 0$1"],["(\\d{3})(\\d{3,4})(\\d{4})","$1 $2 $3",["[89]"],"8 $1"]],"8",0,"0|80?",0,0,0,0,"8~10"],"BZ":["501","00","(?:0800\\d|[2-8])\\d{6}",[7,11],[["(\\d{3})(\\d{4})","$1-$2",["[2-8]"]],["(\\d)(\\d{3})(\\d{4})(\\d{3})","$1-$2-$3-$4",["0"]]]],"CA":["1","011","(?:[2-8]\\d|90)\\d{8}|3\\d{6}",[7,10],0,"1",0,0,0,0,0,[["(?:2(?:04|[23]6|[48]9|50|63)|3(?:06|43|6[578])|4(?:03|1[68]|3[178]|50|68|74)|5(?:06|1[49]|48|79|8[147])|6(?:04|13|39|47|72)|7(?:0[59]|78|8[02])|8(?:[06]7|19|25|73)|90[25])[2-9]\\d{6}",[10]],["",[10]],["8(?:00|33|44|55|66|77|88)[2-9]\\d{6}",[10]],["900[2-9]\\d{6}",[10]],["52(?:3(?:[2-46-9][02-9]\\d|5(?:[02-46-9]\\d|5[0-46-9]))|4(?:[2-478][02-9]\\d|5(?:[034]\\d|2[024-9]|5[0-46-9])|6(?:0[1-9]|[2-9]\\d)|9(?:[05-9]\\d|2[0-5]|49)))\\d{4}|52[34][2-9]1[02-9]\\d{4}|(?:5(?:00|2[125-7]|33|44|66|77|88)|622)[2-9]\\d{6}",[10]],0,["310\\d{4}",[7]],0,["600[2-9]\\d{6}",[10]]]],"CC":["61","001[14-689]|14(?:1[14]|34|4[17]|[56]6|7[47]|88)0011","1(?:[0-79]\\d{8}(?:\\d{2})?|8[0-24-9]\\d{7})|[148]\\d{8}|1\\d{5,7}",[6,7,8,9,10,12],0,"0",0,"0|([59]\\d{7})$","8$1",0,0,[["8(?:51(?:0(?:02|31|60|89)|1(?:18|76)|223)|91(?:0(?:1[0-2]|29)|1(?:[28]2|50|79)|2(?:10|64)|3(?:[06]8|22)|4[29]8|62\\d|70[23]|959))\\d{3}",[9]],["4(?:83[0-38]|93[0-6])\\d{5}|4(?:[0-3]\\d|4[047-9]|5[0-25-9]|6[06-9]|7[02-9]|8[0-24-9]|9[0-27-9])\\d{6}",[9]],["180(?:0\\d{3}|2)\\d{3}",[7,10]],["190[0-26]\\d{6}",[10]],0,0,0,0,["14(?:5(?:1[0458]|[23][458])|71\\d)\\d{4}",[9]],["13(?:00\\d{6}(?:\\d{2})?|45[0-4]\\d{3})|13\\d{4}",[6,8,10,12]]],"0011"],"CD":["243","00","[189]\\d{8}|[1-68]\\d{6}",[7,9],[["(\\d{2})(\\d{2})(\\d{3})","$1 $2 $3",["88"],"0$1"],["(\\d{2})(\\d{5})","$1 $2",["[1-6]"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["1"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[89]"],"0$1"]],"0"],"CF":["236","00","(?:[27]\\d{3}|8776)\\d{4}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[278]"]]]],"CG":["242","00","222\\d{6}|(?:0\\d|80)\\d{7}",[9],[["(\\d)(\\d{4})(\\d{4})","$1 $2 $3",["8"]],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[02]"]]]],"CH":["41","00","8\\d{11}|[2-9]\\d{8}",[9],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["8[047]|90"],"0$1"],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[2-79]|81"],"0$1"],["(\\d{3})(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4 $5",["8"],"0$1"]],"0"],"CI":["225","00","[02]\\d{9}",[10],[["(\\d{2})(\\d{2})(\\d)(\\d{5})","$1 $2 $3 $4",["2"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{4})","$1 $2 $3 $4",["0"]]]],"CK":["682","00","[2-578]\\d{4}",[5],[["(\\d{2})(\\d{3})","$1 $2",["[2-578]"]]]],"CL":["56","(?:0|1(?:1[0-69]|2[02-5]|5[13-58]|69|7[0167]|8[018]))0","12300\\d{6}|6\\d{9,10}|[2-9]\\d{8}",[9,10,11],[["(\\d{5})(\\d{4})","$1 $2",["219","2196"],"($1)"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["44"]],["(\\d)(\\d{4})(\\d{4})","$1 $2 $3",["2[1-36]"],"($1)"],["(\\d)(\\d{4})(\\d{4})","$1 $2 $3",["9[2-9]"]],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["3[2-5]|[47]|5[1-3578]|6[13-57]|8(?:0[1-9]|[1-9])"],"($1)"],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["60|8"]],["(\\d{4})(\\d{3})(\\d{4})","$1 $2 $3",["1"]],["(\\d{3})(\\d{3})(\\d{2})(\\d{3})","$1 $2 $3 $4",["60"]]]],"CM":["237","00","[26]\\d{8}|88\\d{6,7}",[8,9],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["88"]],["(\\d)(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4 $5",["[26]|88"]]]],"CN":["86","00|1(?:[12]\\d|79)\\d\\d00","1[127]\\d{8,9}|2\\d{9}(?:\\d{2})?|[12]\\d{6,7}|86\\d{6}|(?:1[03-689]\\d|6)\\d{7,9}|(?:[3-579]\\d|8[0-57-9])\\d{6,9}",[7,8,9,10,11,12],[["(\\d{2})(\\d{5,6})","$1 $2",["(?:10|2[0-57-9])[19]","(?:10|2[0-57-9])(?:10|9[56])","(?:10|2[0-57-9])(?:100|9[56])"],"0$1"],["(\\d{3})(\\d{5,6})","$1 $2",["3(?:[157]|35|49|9[1-68])|4(?:[17]|2[179]|6[47-9]|8[23])|5(?:[1357]|2[37]|4[36]|6[1-46]|80)|6(?:3[1-5]|6[0238]|9[12])|7(?:01|[1579]|2[248]|3[014-9]|4[3-6]|6[023689])|8(?:1[236-8]|2[5-7]|[37]|8[36-8]|9[1-8])|9(?:0[1-3689]|1[1-79]|[379]|4[13]|5[1-5])|(?:4[35]|59|85)[1-9]","(?:3(?:[157]\\d|35|49|9[1-68])|4(?:[17]\\d|2[179]|[35][1-9]|6[47-9]|8[23])|5(?:[1357]\\d|2[37]|4[36]|6[1-46]|80|9[1-9])|6(?:3[1-5]|6[0238]|9[12])|7(?:01|[1579]\\d|2[248]|3[014-9]|4[3-6]|6[023689])|8(?:1[236-8]|2[5-7]|[37]\\d|5[1-9]|8[36-8]|9[1-8])|9(?:0[1-3689]|1[1-79]|[379]\\d|4[13]|5[1-5]))[19]","85[23](?:10|95)|(?:3(?:[157]\\d|35|49|9[1-68])|4(?:[17]\\d|2[179]|[35][1-9]|6[47-9]|8[23])|5(?:[1357]\\d|2[37]|4[36]|6[1-46]|80|9[1-9])|6(?:3[1-5]|6[0238]|9[12])|7(?:01|[1579]\\d|2[248]|3[014-9]|4[3-6]|6[023689])|8(?:1[236-8]|2[5-7]|[37]\\d|5[14-9]|8[36-8]|9[1-8])|9(?:0[1-3689]|1[1-79]|[379]\\d|4[13]|5[1-5]))(?:10|9[56])","85[23](?:100|95)|(?:3(?:[157]\\d|35|49|9[1-68])|4(?:[17]\\d|2[179]|[35][1-9]|6[47-9]|8[23])|5(?:[1357]\\d|2[37]|4[36]|6[1-46]|80|9[1-9])|6(?:3[1-5]|6[0238]|9[12])|7(?:01|[1579]\\d|2[248]|3[014-9]|4[3-6]|6[023689])|8(?:1[236-8]|2[5-7]|[37]\\d|5[14-9]|8[36-8]|9[1-8])|9(?:0[1-3689]|1[1-79]|[379]\\d|4[13]|5[1-5]))(?:100|9[56])"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["(?:4|80)0"]],["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["10|2(?:[02-57-9]|1[1-9])","10|2(?:[02-57-9]|1[1-9])","10[0-79]|2(?:[02-57-9]|1[1-79])|(?:10|21)8(?:0[1-9]|[1-9])"],"0$1",1],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["3(?:[3-59]|7[02-68])|4(?:[26-8]|3[3-9]|5[2-9])|5(?:3[03-9]|[468]|7[028]|9[2-46-9])|6|7(?:[0-247]|3[04-9]|5[0-4689]|6[2368])|8(?:[1-358]|9[1-7])|9(?:[013479]|5[1-5])|(?:[34]1|55|79|87)[02-9]"],"0$1",1],["(\\d{3})(\\d{7,8})","$1 $2",["9"]],["(\\d{4})(\\d{3})(\\d{4})","$1 $2 $3",["80"],"0$1",1],["(\\d{3})(\\d{4})(\\d{4})","$1 $2 $3",["[3-578]"],"0$1",1],["(\\d{3})(\\d{4})(\\d{4})","$1 $2 $3",["1[3-9]"]],["(\\d{2})(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3 $4",["[12]"],"0$1",1]],"0",0,"0|(1(?:[12]\\d|79)\\d\\d)",0,0,0,0,"00"],"CO":["57","00(?:4(?:[14]4|56)|[579])","(?:60\\d\\d|9101)\\d{6}|(?:1\\d|3)\\d{9}",[10,11],[["(\\d{3})(\\d{7})","$1 $2",["6"],"($1)"],["(\\d{3})(\\d{7})","$1 $2",["[39]"]],["(\\d)(\\d{3})(\\d{7})","$1-$2-$3",["1"],"0$1",0,"$1 $2 $3"]],"0",0,"0(4(?:[14]4|56)|[579])?"],"CR":["506","00","(?:8\\d|90)\\d{8}|(?:[24-8]\\d{3}|3005)\\d{4}",[8,10],[["(\\d{4})(\\d{4})","$1 $2",["[2-7]|8[3-9]"]],["(\\d{3})(\\d{3})(\\d{4})","$1-$2-$3",["[89]"]]],0,0,"(19(?:0[0-2468]|1[09]|20|66|77|99))"],"CU":["53","119","[27]\\d{6,7}|[34]\\d{5,7}|(?:5|8\\d\\d)\\d{7}",[6,7,8,10],[["(\\d{2})(\\d{4,6})","$1 $2",["2[1-4]|[34]"],"(0$1)"],["(\\d)(\\d{6,7})","$1 $2",["7"],"(0$1)"],["(\\d)(\\d{7})","$1 $2",["5"],"0$1"],["(\\d{3})(\\d{7})","$1 $2",["8"],"0$1"]],"0"],"CV":["238","0","(?:[2-59]\\d\\d|800)\\d{4}",[7],[["(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3",["[2-589]"]]]],"CW":["599","00","(?:[34]1|60|(?:7|9\\d)\\d)\\d{5}",[7,8],[["(\\d{3})(\\d{4})","$1 $2",["[3467]"]],["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["9[4-8]"]]],0,0,0,0,0,"[69]"],"CX":["61","001[14-689]|14(?:1[14]|34|4[17]|[56]6|7[47]|88)0011","1(?:[0-79]\\d{8}(?:\\d{2})?|8[0-24-9]\\d{7})|[148]\\d{8}|1\\d{5,7}",[6,7,8,9,10,12],0,"0",0,"0|([59]\\d{7})$","8$1",0,0,[["8(?:51(?:0(?:01|30|59|88)|1(?:17|46|75)|2(?:22|35))|91(?:00[6-9]|1(?:[28]1|49|78)|2(?:09|63)|3(?:12|26|75)|4(?:56|97)|64\\d|7(?:0[01]|1[0-2])|958))\\d{3}",[9]],["4(?:83[0-38]|93[0-6])\\d{5}|4(?:[0-3]\\d|4[047-9]|5[0-25-9]|6[06-9]|7[02-9]|8[0-24-9]|9[0-27-9])\\d{6}",[9]],["180(?:0\\d{3}|2)\\d{3}",[7,10]],["190[0-26]\\d{6}",[10]],0,0,0,0,["14(?:5(?:1[0458]|[23][458])|71\\d)\\d{4}",[9]],["13(?:00\\d{6}(?:\\d{2})?|45[0-4]\\d{3})|13\\d{4}",[6,8,10,12]]],"0011"],"CY":["357","00","(?:[279]\\d|[58]0)\\d{6}",[8],[["(\\d{2})(\\d{6})","$1 $2",["[257-9]"]]]],"CZ":["420","00","(?:[2-578]\\d|60)\\d{7}|9\\d{8,11}",[9],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[2-8]|9[015-7]"]],["(\\d{2})(\\d{3})(\\d{3})(\\d{2})","$1 $2 $3 $4",["96"]],["(\\d{2})(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3 $4",["9"]],["(\\d{3})(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3 $4",["9"]]]],"DE":["49","00","[2579]\\d{5,14}|49(?:[34]0|69|8\\d)\\d\\d?|49(?:37|49|60|7[089]|9\\d)\\d{1,3}|49(?:2[02-9]|3[2-689]|7[1-7])\\d{1,8}|(?:1|[368]\\d|4[0-8])\\d{3,13}|49(?:[015]\\d|[23]1|[46][1-8])\\d{1,9}",[4,5,6,7,8,9,10,11,12,13,14,15],[["(\\d{2})(\\d{3,13})","$1 $2",["3[02]|40|[68]9"],"0$1"],["(\\d{3})(\\d{3,12})","$1 $2",["2(?:0[1-389]|1[124]|2[18]|3[14])|3(?:[35-9][15]|4[015])|906|(?:2[4-9]|4[2-9]|[579][1-9]|[68][1-8])1","2(?:0[1-389]|12[0-8])|3(?:[35-9][15]|4[015])|906|2(?:[13][14]|2[18])|(?:2[4-9]|4[2-9]|[579][1-9]|[68][1-8])1"],"0$1"],["(\\d{4})(\\d{2,11})","$1 $2",["[24-6]|3(?:[3569][02-46-9]|4[2-4679]|7[2-467]|8[2-46-8])|70[2-8]|8(?:0[2-9]|[1-8])|90[7-9]|[79][1-9]","[24-6]|3(?:3(?:0[1-467]|2[127-9]|3[124578]|7[1257-9]|8[1256]|9[145])|4(?:2[135]|4[13578]|9[1346])|5(?:0[14]|2[1-3589]|6[1-4]|7[13468]|8[13568])|6(?:2[1-489]|3[124-6]|6[13]|7[12579]|8[1-356]|9[135])|7(?:2[1-7]|4[145]|6[1-5]|7[1-4])|8(?:21|3[1468]|6|7[1467]|8[136])|9(?:0[12479]|2[1358]|4[134679]|6[1-9]|7[136]|8[147]|9[1468]))|70[2-8]|8(?:0[2-9]|[1-8])|90[7-9]|[79][1-9]|3[68]4[1347]|3(?:47|60)[1356]|3(?:3[46]|46|5[49])[1246]|3[4579]3[1357]"],"0$1"],["(\\d{3})(\\d{4})","$1 $2",["138"],"0$1"],["(\\d{5})(\\d{2,10})","$1 $2",["3"],"0$1"],["(\\d{3})(\\d{5,11})","$1 $2",["181"],"0$1"],["(\\d{3})(\\d)(\\d{4,10})","$1 $2 $3",["1(?:3|80)|9"],"0$1"],["(\\d{3})(\\d{7,8})","$1 $2",["1[67]"],"0$1"],["(\\d{3})(\\d{7,12})","$1 $2",["8"],"0$1"],["(\\d{5})(\\d{6})","$1 $2",["185","1850","18500"],"0$1"],["(\\d{3})(\\d{4})(\\d{4})","$1 $2 $3",["7"],"0$1"],["(\\d{4})(\\d{7})","$1 $2",["18[68]"],"0$1"],["(\\d{5})(\\d{6})","$1 $2",["15[0568]"],"0$1"],["(\\d{4})(\\d{7})","$1 $2",["15[1279]"],"0$1"],["(\\d{3})(\\d{8})","$1 $2",["18"],"0$1"],["(\\d{3})(\\d{2})(\\d{7,8})","$1 $2 $3",["1(?:6[023]|7)"],"0$1"],["(\\d{4})(\\d{2})(\\d{7})","$1 $2 $3",["15[279]"],"0$1"],["(\\d{3})(\\d{2})(\\d{8})","$1 $2 $3",["15"],"0$1"]],"0"],"DJ":["253","00","(?:2\\d|77)\\d{6}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[27]"]]]],"DK":["45","00","[2-9]\\d{7}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[2-9]"]]]],"DM":["1","011","(?:[58]\\d\\d|767|900)\\d{7}",[10],0,"1",0,"1|([2-7]\\d{6})$","767$1",0,"767"],"DO":["1","011","(?:[58]\\d\\d|900)\\d{7}",[10],0,"1",0,0,0,0,"8001|8[024]9"],"DZ":["213","00","(?:[1-4]|[5-79]\\d|80)\\d{7}",[8,9],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[1-4]"],"0$1"],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["9"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[5-8]"],"0$1"]],"0"],"EC":["593","00","1\\d{9,10}|(?:[2-7]|9\\d)\\d{7}",[8,9,10,11],[["(\\d)(\\d{3})(\\d{4})","$1 $2-$3",["[2-7]"],"(0$1)",0,"$1-$2-$3"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["9"],"0$1"],["(\\d{4})(\\d{3})(\\d{3,4})","$1 $2 $3",["1"]]],"0"],"EE":["372","00","8\\d{9}|[4578]\\d{7}|(?:[3-8]\\d|90)\\d{5}",[7,8,10],[["(\\d{3})(\\d{4})","$1 $2",["[369]|4[3-8]|5(?:[0-2]|5[0-478]|6[45])|7[1-9]|88","[369]|4[3-8]|5(?:[02]|1(?:[0-8]|95)|5[0-478]|6(?:4[0-4]|5[1-589]))|7[1-9]|88"]],["(\\d{4})(\\d{3,4})","$1 $2",["[45]|8(?:00|[1-49])","[45]|8(?:00[1-9]|[1-49])"]],["(\\d{2})(\\d{2})(\\d{4})","$1 $2 $3",["7"]],["(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3",["8"]]]],"EG":["20","00","[189]\\d{8,9}|[24-6]\\d{8}|[135]\\d{7}",[8,9,10],[["(\\d)(\\d{7,8})","$1 $2",["[23]"],"0$1"],["(\\d{2})(\\d{6,7})","$1 $2",["1[35]|[4-6]|8[2468]|9[235-7]"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["[189]"],"0$1"]],"0"],"EH":["212","00","[5-8]\\d{8}",[9],0,"0",0,0,0,0,"528[89]"],"ER":["291","00","[178]\\d{6}",[7],[["(\\d)(\\d{3})(\\d{3})","$1 $2 $3",["[178]"],"0$1"]],"0"],"ES":["34","00","[5-9]\\d{8}",[9],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[89]00"]],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[5-9]"]]]],"ET":["251","00","(?:11|[2-579]\\d)\\d{7}",[9],[["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[1-579]"],"0$1"]],"0"],"FI":["358","00|99(?:[01469]|5(?:[14]1|3[23]|5[59]|77|88|9[09]))","[1-35689]\\d{4}|7\\d{10,11}|(?:[124-7]\\d|3[0-46-9])\\d{8}|[1-9]\\d{5,8}",[5,6,7,8,9,10,11,12],[["(\\d)(\\d{4,9})","$1 $2",["[2568][1-8]|3(?:0[1-9]|[1-9])|9"],"0$1"],["(\\d{3})(\\d{3,7})","$1 $2",["[12]00|[368]|70[07-9]"],"0$1"],["(\\d{2})(\\d{4,8})","$1 $2",["[1245]|7[135]"],"0$1"],["(\\d{2})(\\d{6,10})","$1 $2",["7"],"0$1"]],"0",0,0,0,0,"1[03-79]|[2-9]",0,"00"],"FJ":["679","0(?:0|52)","45\\d{5}|(?:0800\\d|[235-9])\\d{6}",[7,11],[["(\\d{3})(\\d{4})","$1 $2",["[235-9]|45"]],["(\\d{4})(\\d{3})(\\d{4})","$1 $2 $3",["0"]]],0,0,0,0,0,0,0,"00"],"FK":["500","00","[2-7]\\d{4}",[5]],"FM":["691","00","(?:[39]\\d\\d|820)\\d{4}",[7],[["(\\d{3})(\\d{4})","$1 $2",["[389]"]]]],"FO":["298","00","[2-9]\\d{5}",[6],[["(\\d{6})","$1",["[2-9]"]]],0,0,"(10(?:01|[12]0|88))"],"FR":["33","00","[1-9]\\d{8}",[9],[["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["8"],"0 $1"],["(\\d)(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4 $5",["[1-79]"],"0$1"]],"0"],"GA":["241","00","(?:[067]\\d|11)\\d{6}|[2-7]\\d{6}",[7,8],[["(\\d)(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[2-7]"],"0$1"],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["0"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["11|[67]"],"0$1"]],0,0,"0(11\\d{6}|60\\d{6}|61\\d{6}|6[256]\\d{6}|7[467]\\d{6})","$1"],"GB":["44","00","[1-357-9]\\d{9}|[18]\\d{8}|8\\d{6}",[7,9,10],[["(\\d{3})(\\d{4})","$1 $2",["800","8001","80011","800111","8001111"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3",["845","8454","84546","845464"],"0$1"],["(\\d{3})(\\d{6})","$1 $2",["800"],"0$1"],["(\\d{5})(\\d{4,5})","$1 $2",["1(?:38|5[23]|69|76|94)","1(?:(?:38|69)7|5(?:24|39)|768|946)","1(?:3873|5(?:242|39[4-6])|(?:697|768)[347]|9467)"],"0$1"],["(\\d{4})(\\d{5,6})","$1 $2",["1(?:[2-69][02-9]|[78])"],"0$1"],["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["[25]|7(?:0|6[02-9])","[25]|7(?:0|6(?:[03-9]|2[356]))"],"0$1"],["(\\d{4})(\\d{6})","$1 $2",["7"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["[1389]"],"0$1"]],"0",0,0,0,0,0,[["(?:1(?:1(?:3(?:[0-58]\\d\\d|73[0235])|4(?:[0-5]\\d\\d|69[7-9]|70[01359])|(?:5[0-26-9]|[78][0-49])\\d\\d|6(?:[0-4]\\d\\d|50[0-79]))|2(?:(?:0[024-9]|2[3-9]|3[3-79]|4[1-689]|[58][02-9]|6[0-47-9]|7[013-9]|9\\d)\\d\\d|1(?:[0-7]\\d\\d|8(?:[02]\\d|1[0-26-9])))|(?:3(?:0\\d|1[0-8]|[25][02-9]|3[02-579]|[468][0-46-9]|7[1-35-79]|9[2-578])|4(?:0[03-9]|[137]\\d|[28][02-57-9]|4[02-69]|5[0-8]|[69][0-79])|5(?:0[1-35-9]|[16]\\d|2[024-9]|3[015689]|4[02-9]|5[03-9]|7[0-35-9]|8[0-468]|9[0-57-9])|6(?:0[034689]|1\\d|2[0-35689]|[38][013-9]|4[1-467]|5[0-69]|6[13-9]|7[0-8]|9[0-24578])|7(?:0[0246-9]|2\\d|3[0236-8]|4[03-9]|5[0-46-9]|6[013-9]|7[0-35-9]|8[024-9]|9[02-9])|8(?:0[35-9]|2[1-57-9]|3[02-578]|4[0-578]|5[124-9]|6[2-69]|7\\d|8[02-9]|9[02569])|9(?:0[02-589]|[18]\\d|2[02-689]|3[1-57-9]|4[2-9]|5[0-579]|6[2-47-9]|7[0-24578]|9[2-57]))\\d\\d)|2(?:0[013478]|3[0189]|4[017]|8[0-46-9]|9[0-2])\\d{3})\\d{4}|1(?:2(?:0(?:46[1-4]|87[2-9])|545[1-79]|76(?:2\\d|3[1-8]|6[1-6])|9(?:7(?:2[0-4]|3[2-5])|8(?:2[2-8]|7[0-47-9]|8[3-5])))|3(?:6(?:38[2-5]|47[23])|8(?:47[04-9]|64[0157-9]))|4(?:044[1-7]|20(?:2[23]|8\\d)|6(?:0(?:30|5[2-57]|6[1-8]|7[2-8])|140)|8(?:052|87[1-3]))|5(?:2(?:4(?:3[2-79]|6\\d)|76\\d)|6(?:26[06-9]|686))|6(?:06(?:4\\d|7[4-79])|295[5-7]|35[34]\\d|47(?:24|61)|59(?:5[08]|6[67]|74)|9(?:55[0-4]|77[23]))|7(?:26(?:6[13-9]|7[0-7])|(?:442|688)\\d|50(?:2[0-3]|[3-68]2|76))|8(?:27[56]\\d|37(?:5[2-5]|8[239])|843[2-58])|9(?:0(?:0(?:6[1-8]|85)|52\\d)|3583|4(?:66[1-8]|9(?:2[01]|81))|63(?:23|3[1-4])|9561))\\d{3}",[9,10]],["7(?:457[0-57-9]|700[01]|911[028])\\d{5}|7(?:[1-3]\\d\\d|4(?:[0-46-9]\\d|5[0-689])|5(?:0[0-8]|[13-9]\\d|2[0-35-9])|7(?:0[1-9]|[1-7]\\d|8[02-9]|9[0-689])|8(?:[014-9]\\d|[23][0-8])|9(?:[024-9]\\d|1[02-9]|3[0-689]))\\d{6}",[10]],["80[08]\\d{7}|800\\d{6}|8001111"],["(?:8(?:4[2-5]|7[0-3])|9(?:[01]\\d|8[2-49]))\\d{7}|845464\\d",[7,10]],["70\\d{8}",[10]],0,["(?:3[0347]|55)\\d{8}",[10]],["76(?:464|652)\\d{5}|76(?:0[0-2]|2[356]|34|4[01347]|5[49]|6[0-369]|77|8[14]|9[139])\\d{6}",[10]],["56\\d{8}",[10]]],0," x"],"GD":["1","011","(?:473|[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([2-9]\\d{6})$","473$1",0,"473"],"GE":["995","00","(?:[3-57]\\d\\d|800)\\d{6}",[9],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["70"],"0$1"],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["32"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[57]"]],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[348]"],"0$1"]],"0"],"GF":["594","00","(?:[56]94|80\\d|976)\\d{6}",[9],[["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[569]"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["8"],"0$1"]],"0"],"GG":["44","00","(?:1481|[357-9]\\d{3})\\d{6}|8\\d{6}(?:\\d{2})?",[7,9,10],0,"0",0,"0|([25-9]\\d{5})$","1481$1",0,0,[["1481[25-9]\\d{5}",[10]],["7(?:(?:781|839)\\d|911[17])\\d{5}",[10]],["80[08]\\d{7}|800\\d{6}|8001111"],["(?:8(?:4[2-5]|7[0-3])|9(?:[01]\\d|8[0-3]))\\d{7}|845464\\d",[7,10]],["70\\d{8}",[10]],0,["(?:3[0347]|55)\\d{8}",[10]],["76(?:464|652)\\d{5}|76(?:0[0-2]|2[356]|34|4[01347]|5[49]|6[0-369]|77|8[14]|9[139])\\d{6}",[10]],["56\\d{8}",[10]]]],"GH":["233","00","(?:[235]\\d{3}|800)\\d{5}",[8,9],[["(\\d{3})(\\d{5})","$1 $2",["8"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[235]"],"0$1"]],"0"],"GI":["350","00","(?:[25]\\d\\d|606)\\d{5}",[8],[["(\\d{3})(\\d{5})","$1 $2",["2"]]]],"GL":["299","00","(?:19|[2-689]\\d|70)\\d{4}",[6],[["(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3",["19|[2-9]"]]]],"GM":["220","00","[2-9]\\d{6}",[7],[["(\\d{3})(\\d{4})","$1 $2",["[2-9]"]]]],"GN":["224","00","722\\d{6}|(?:3|6\\d)\\d{7}",[8,9],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["3"]],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[67]"]]]],"GP":["590","00","(?:590|(?:69|80)\\d|976)\\d{6}",[9],[["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[569]"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["8"],"0$1"]],"0",0,0,0,0,0,[["590(?:0[1-68]|[14][0-24-9]|2[0-68]|3[1289]|5[3-579]|6[0-289]|7[08]|8[0-689]|9\\d)\\d{4}"],["69(?:0\\d\\d|1(?:2[2-9]|3[0-5]))\\d{4}"],["80[0-5]\\d{6}"],0,0,0,0,0,["976[01]\\d{5}"]]],"GQ":["240","00","222\\d{6}|(?:3\\d|55|[89]0)\\d{7}",[9],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[235]"]],["(\\d{3})(\\d{6})","$1 $2",["[89]"]]]],"GR":["30","00","5005000\\d{3}|8\\d{9,11}|(?:[269]\\d|70)\\d{8}",[10,11,12],[["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["21|7"]],["(\\d{4})(\\d{6})","$1 $2",["2(?:2|3[2-57-9]|4[2-469]|5[2-59]|6[2-9]|7[2-69]|8[2-49])|5"]],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["[2689]"]],["(\\d{3})(\\d{3,4})(\\d{5})","$1 $2 $3",["8"]]]],"GT":["502","00","(?:1\\d{3}|[2-7])\\d{7}",[8,11],[["(\\d{4})(\\d{4})","$1 $2",["[2-7]"]],["(\\d{4})(\\d{3})(\\d{4})","$1 $2 $3",["1"]]]],"GU":["1","011","(?:[58]\\d\\d|671|900)\\d{7}",[10],0,"1",0,"1|([3-9]\\d{6})$","671$1",0,"671"],"GW":["245","00","[49]\\d{8}|4\\d{6}",[7,9],[["(\\d{3})(\\d{4})","$1 $2",["40"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[49]"]]]],"GY":["592","001","9008\\d{3}|(?:[2-467]\\d\\d|862)\\d{4}",[7],[["(\\d{3})(\\d{4})","$1 $2",["[2-46-9]"]]]],"HK":["852","00(?:30|5[09]|[126-9]?)","8[0-46-9]\\d{6,7}|9\\d{4,7}|(?:[2-7]|9\\d{3})\\d{7}",[5,6,7,8,9,11],[["(\\d{3})(\\d{2,5})","$1 $2",["900","9003"]],["(\\d{4})(\\d{4})","$1 $2",["[2-7]|8[1-4]|9(?:0[1-9]|[1-8])"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["8"]],["(\\d{3})(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3 $4",["9"]]],0,0,0,0,0,0,0,"00"],"HN":["504","00","8\\d{10}|[237-9]\\d{7}",[8,11],[["(\\d{4})(\\d{4})","$1-$2",["[237-9]"]]]],"HR":["385","00","(?:[24-69]\\d|3[0-79])\\d{7}|80\\d{5,7}|[1-79]\\d{7}|6\\d{5,6}",[6,7,8,9],[["(\\d{2})(\\d{2})(\\d{2,3})","$1 $2 $3",["6[01]"],"0$1"],["(\\d{3})(\\d{2})(\\d{2,3})","$1 $2 $3",["8"],"0$1"],["(\\d)(\\d{4})(\\d{3})","$1 $2 $3",["1"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[67]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["9"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[2-5]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["8"],"0$1"]],"0"],"HT":["509","00","[2-489]\\d{7}",[8],[["(\\d{2})(\\d{2})(\\d{4})","$1 $2 $3",["[2-489]"]]]],"HU":["36","00","[235-7]\\d{8}|[1-9]\\d{7}",[8,9],[["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["1"],"(06 $1)"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[27][2-9]|3[2-7]|4[24-9]|5[2-79]|6|8[2-57-9]|9[2-69]"],"(06 $1)"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[2-9]"],"06 $1"]],"06"],"ID":["62","00[89]","(?:(?:00[1-9]|8\\d)\\d{4}|[1-36])\\d{6}|00\\d{10}|[1-9]\\d{8,10}|[2-9]\\d{7}",[7,8,9,10,11,12,13],[["(\\d)(\\d{3})(\\d{3})","$1 $2 $3",["15"]],["(\\d{2})(\\d{5,9})","$1 $2",["2[124]|[36]1"],"(0$1)"],["(\\d{3})(\\d{5,7})","$1 $2",["800"],"0$1"],["(\\d{3})(\\d{5,8})","$1 $2",["[2-79]"],"(0$1)"],["(\\d{3})(\\d{3,4})(\\d{3})","$1-$2-$3",["8[1-35-9]"],"0$1"],["(\\d{3})(\\d{6,8})","$1 $2",["1"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["804"],"0$1"],["(\\d{3})(\\d)(\\d{3})(\\d{3})","$1 $2 $3 $4",["80"],"0$1"],["(\\d{3})(\\d{4})(\\d{4,5})","$1-$2-$3",["8"],"0$1"]],"0"],"IE":["353","00","(?:1\\d|[2569])\\d{6,8}|4\\d{6,9}|7\\d{8}|8\\d{8,9}",[7,8,9,10],[["(\\d{2})(\\d{5})","$1 $2",["2[24-9]|47|58|6[237-9]|9[35-9]"],"(0$1)"],["(\\d{3})(\\d{5})","$1 $2",["[45]0"],"(0$1)"],["(\\d)(\\d{3,4})(\\d{4})","$1 $2 $3",["1"],"(0$1)"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[2569]|4[1-69]|7[14]"],"(0$1)"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["70"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["81"],"(0$1)"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[78]"],"0$1"],["(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3",["1"]],["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["4"],"(0$1)"],["(\\d{2})(\\d)(\\d{3})(\\d{4})","$1 $2 $3 $4",["8"],"0$1"]],"0"],"IL":["972","0(?:0|1[2-9])","1\\d{6}(?:\\d{3,5})?|[57]\\d{8}|[1-489]\\d{7}",[7,8,9,10,11,12],[["(\\d{4})(\\d{3})","$1-$2",["125"]],["(\\d{4})(\\d{2})(\\d{2})","$1-$2-$3",["121"]],["(\\d)(\\d{3})(\\d{4})","$1-$2-$3",["[2-489]"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1-$2-$3",["[57]"],"0$1"],["(\\d{4})(\\d{3})(\\d{3})","$1-$2-$3",["12"]],["(\\d{4})(\\d{6})","$1-$2",["159"]],["(\\d)(\\d{3})(\\d{3})(\\d{3})","$1-$2-$3-$4",["1[7-9]"]],["(\\d{3})(\\d{1,2})(\\d{3})(\\d{4})","$1-$2 $3-$4",["15"]]],"0"],"IM":["44","00","1624\\d{6}|(?:[3578]\\d|90)\\d{8}",[10],0,"0",0,"0|([25-8]\\d{5})$","1624$1",0,"74576|(?:16|7[56])24"],"IN":["91","00","(?:000800|[2-9]\\d\\d)\\d{7}|1\\d{7,12}",[8,9,10,11,12,13],[["(\\d{8})","$1",["5(?:0|2[23]|3[03]|[67]1|88)","5(?:0|2(?:21|3)|3(?:0|3[23])|616|717|888)","5(?:0|2(?:21|3)|3(?:0|3[23])|616|717|8888)"],0,1],["(\\d{4})(\\d{4,5})","$1 $2",["180","1800"],0,1],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["140"],0,1],["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["11|2[02]|33|4[04]|79[1-7]|80[2-46]","11|2[02]|33|4[04]|79(?:[1-6]|7[19])|80(?:[2-4]|6[0-589])","11|2[02]|33|4[04]|79(?:[124-6]|3(?:[02-9]|1[0-24-9])|7(?:1|9[1-6]))|80(?:[2-4]|6[0-589])"],"0$1",1],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["1(?:2[0-249]|3[0-25]|4[145]|[68]|7[1257])|2(?:1[257]|3[013]|4[01]|5[0137]|6[0158]|78|8[1568])|3(?:26|4[1-3]|5[34]|6[01489]|7[02-46]|8[159])|4(?:1[36]|2[1-47]|5[12]|6[0-26-9]|7[0-24-9]|8[013-57]|9[014-7])|5(?:1[025]|22|[36][25]|4[28]|5[12]|[78]1)|6(?:12|[2-4]1|5[17]|6[13]|80)|7(?:12|3[134]|4[47]|61|88)|8(?:16|2[014]|3[126]|6[136]|7[078]|8[34]|91)|(?:43|59|75)[15]|(?:1[59]|29|67|72)[14]","1(?:2[0-24]|3[0-25]|4[145]|[59][14]|6[1-9]|7[1257]|8[1-57-9])|2(?:1[257]|3[013]|4[01]|5[0137]|6[058]|78|8[1568]|9[14])|3(?:26|4[1-3]|5[34]|6[01489]|7[02-46]|8[159])|4(?:1[36]|2[1-47]|3[15]|5[12]|6[0-26-9]|7[0-24-9]|8[013-57]|9[014-7])|5(?:1[025]|22|[36][25]|4[28]|[578]1|9[15])|674|7(?:(?:2[14]|3[34]|5[15])[2-6]|61[346]|88[0-8])|8(?:70[2-6]|84[235-7]|91[3-7])|(?:1(?:29|60|8[06])|261|552|6(?:12|[2-47]1|5[17]|6[13]|80)|7(?:12|31|4[47])|8(?:16|2[014]|3[126]|6[136]|7[78]|83))[2-7]","1(?:2[0-24]|3[0-25]|4[145]|[59][14]|6[1-9]|7[1257]|8[1-57-9])|2(?:1[257]|3[013]|4[01]|5[0137]|6[058]|78|8[1568]|9[14])|3(?:26|4[1-3]|5[34]|6[01489]|7[02-46]|8[159])|4(?:1[36]|2[1-47]|3[15]|5[12]|6[0-26-9]|7[0-24-9]|8[013-57]|9[014-7])|5(?:1[025]|22|[36][25]|4[28]|[578]1|9[15])|6(?:12(?:[2-6]|7[0-8])|74[2-7])|7(?:(?:2[14]|5[15])[2-6]|3171|61[346]|88(?:[2-7]|82))|8(?:70[2-6]|84(?:[2356]|7[19])|91(?:[3-6]|7[19]))|73[134][2-6]|(?:74[47]|8(?:16|2[014]|3[126]|6[136]|7[78]|83))(?:[2-6]|7[19])|(?:1(?:29|60|8[06])|261|552|6(?:[2-4]1|5[17]|6[13]|7(?:1|4[0189])|80)|7(?:12|88[01]))[2-7]"],"0$1",1],["(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3",["1(?:[2-479]|5[0235-9])|[2-5]|6(?:1[1358]|2[2457-9]|3[2-5]|4[235-7]|5[2-689]|6[24578]|7[235689]|8[1-6])|7(?:1[013-9]|28|3[129]|4[1-35689]|5[29]|6[02-5]|70)|807","1(?:[2-479]|5[0235-9])|[2-5]|6(?:1[1358]|2(?:[2457]|84|95)|3(?:[2-4]|55)|4[235-7]|5[2-689]|6[24578]|7[235689]|8[1-6])|7(?:1(?:[013-8]|9[6-9])|28[6-8]|3(?:17|2[0-49]|9[2-57])|4(?:1[2-4]|[29][0-7]|3[0-8]|[56]|8[0-24-7])|5(?:2[1-3]|9[0-6])|6(?:0[5689]|2[5-9]|3[02-8]|4|5[0-367])|70[13-7])|807[19]","1(?:[2-479]|5(?:[0236-9]|5[013-9]))|[2-5]|6(?:2(?:84|95)|355|83)|73179|807(?:1|9[1-3])|(?:1552|6(?:1[1358]|2[2457]|3[2-4]|4[235-7]|5[2-689]|6[24578]|7[235689]|8[124-6])\\d|7(?:1(?:[013-8]\\d|9[6-9])|28[6-8]|3(?:2[0-49]|9[2-57])|4(?:1[2-4]|[29][0-7]|3[0-8]|[56]\\d|8[0-24-7])|5(?:2[1-3]|9[0-6])|6(?:0[5689]|2[5-9]|3[02-8]|4\\d|5[0-367])|70[13-7]))[2-7]"],"0$1",1],["(\\d{5})(\\d{5})","$1 $2",["[6-9]"],"0$1",1],["(\\d{4})(\\d{2,4})(\\d{4})","$1 $2 $3",["1(?:6|8[06])","1(?:6|8[06]0)"],0,1],["(\\d{4})(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3 $4",["18"],0,1]],"0"],"IO":["246","00","3\\d{6}",[7],[["(\\d{3})(\\d{4})","$1 $2",["3"]]]],"IQ":["964","00","(?:1|7\\d\\d)\\d{7}|[2-6]\\d{7,8}",[8,9,10],[["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["1"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[2-6]"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["7"],"0$1"]],"0"],"IR":["98","00","[1-9]\\d{9}|(?:[1-8]\\d\\d|9)\\d{3,4}",[4,5,6,7,10],[["(\\d{4,5})","$1",["96"],"0$1"],["(\\d{2})(\\d{4,5})","$1 $2",["(?:1[137]|2[13-68]|3[1458]|4[145]|5[1468]|6[16]|7[1467]|8[13467])[12689]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["9"],"0$1"],["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["[1-8]"],"0$1"]],"0"],"IS":["354","00|1(?:0(?:01|[12]0)|100)","(?:38\\d|[4-9])\\d{6}",[7,9],[["(\\d{3})(\\d{4})","$1 $2",["[4-9]"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["3"]]],0,0,0,0,0,0,0,"00"],"IT":["39","00","0\\d{5,10}|1\\d{8,10}|3(?:[0-8]\\d{7,10}|9\\d{7,8})|(?:55|70)\\d{8}|8\\d{5}(?:\\d{2,4})?",[6,7,8,9,10,11],[["(\\d{2})(\\d{4,6})","$1 $2",["0[26]"]],["(\\d{3})(\\d{3,6})","$1 $2",["0[13-57-9][0159]|8(?:03|4[17]|9[2-5])","0[13-57-9][0159]|8(?:03|4[17]|9(?:2|3[04]|[45][0-4]))"]],["(\\d{4})(\\d{2,6})","$1 $2",["0(?:[13-579][2-46-8]|8[236-8])"]],["(\\d{4})(\\d{4})","$1 $2",["894"]],["(\\d{2})(\\d{3,4})(\\d{4})","$1 $2 $3",["0[26]|5"]],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["1(?:44|[679])|[378]"]],["(\\d{3})(\\d{3,4})(\\d{4})","$1 $2 $3",["0[13-57-9][0159]|14"]],["(\\d{2})(\\d{4})(\\d{5})","$1 $2 $3",["0[26]"]],["(\\d{4})(\\d{3})(\\d{4})","$1 $2 $3",["0"]],["(\\d{3})(\\d{4})(\\d{4,5})","$1 $2 $3",["3"]]],0,0,0,0,0,0,[["0669[0-79]\\d{1,6}|0(?:1(?:[0159]\\d|[27][1-5]|31|4[1-4]|6[1356]|8[2-57])|2\\d\\d|3(?:[0159]\\d|2[1-4]|3[12]|[48][1-6]|6[2-59]|7[1-7])|4(?:[0159]\\d|[23][1-9]|4[245]|6[1-5]|7[1-4]|81)|5(?:[0159]\\d|2[1-5]|3[2-6]|4[1-79]|6[4-6]|7[1-578]|8[3-8])|6(?:[0-57-9]\\d|6[0-8])|7(?:[0159]\\d|2[12]|3[1-7]|4[2-46]|6[13569]|7[13-6]|8[1-59])|8(?:[0159]\\d|2[3-578]|3[1-356]|[6-8][1-5])|9(?:[0159]\\d|[238][1-5]|4[12]|6[1-8]|7[1-6]))\\d{2,7}"],["3[1-9]\\d{8}|3[2-9]\\d{7}",[9,10]],["80(?:0\\d{3}|3)\\d{3}",[6,9]],["(?:0878\\d{3}|89(?:2\\d|3[04]|4(?:[0-4]|[5-9]\\d\\d)|5[0-4]))\\d\\d|(?:1(?:44|6[346])|89(?:38|5[5-9]|9))\\d{6}",[6,8,9,10]],["1(?:78\\d|99)\\d{6}",[9,10]],0,0,0,["55\\d{8}",[10]],["84(?:[08]\\d{3}|[17])\\d{3}",[6,9]]]],"JE":["44","00","1534\\d{6}|(?:[3578]\\d|90)\\d{8}",[10],0,"0",0,"0|([0-24-8]\\d{5})$","1534$1",0,0,[["1534[0-24-8]\\d{5}"],["7(?:(?:(?:50|82)9|937)\\d|7(?:00[378]|97[7-9]))\\d{5}"],["80(?:07(?:35|81)|8901)\\d{4}"],["(?:8(?:4(?:4(?:4(?:05|42|69)|703)|5(?:041|800))|7(?:0002|1206))|90(?:066[59]|1810|71(?:07|55)))\\d{4}"],["701511\\d{4}"],0,["(?:3(?:0(?:07(?:35|81)|8901)|3\\d{4}|4(?:4(?:4(?:05|42|69)|703)|5(?:041|800))|7(?:0002|1206))|55\\d{4})\\d{4}"],["76(?:464|652)\\d{5}|76(?:0[0-2]|2[356]|34|4[01347]|5[49]|6[0-369]|77|8[14]|9[139])\\d{6}"],["56\\d{8}"]]],"JM":["1","011","(?:[58]\\d\\d|658|900)\\d{7}",[10],0,"1",0,0,0,0,"658|876"],"JO":["962","00","(?:(?:[2689]|7\\d)\\d|32|53)\\d{6}",[8,9],[["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["[2356]|87"],"(0$1)"],["(\\d{3})(\\d{5,6})","$1 $2",["[89]"],"0$1"],["(\\d{2})(\\d{7})","$1 $2",["70"],"0$1"],["(\\d)(\\d{4})(\\d{4})","$1 $2 $3",["7"],"0$1"]],"0"],"JP":["81","010","00[1-9]\\d{6,14}|[257-9]\\d{9}|(?:00|[1-9]\\d\\d)\\d{6}",[8,9,10,11,12,13,14,15,16,17],[["(\\d{3})(\\d{3})(\\d{3})","$1-$2-$3",["(?:12|57|99)0"],"0$1"],["(\\d{4})(\\d)(\\d{4})","$1-$2-$3",["1(?:26|3[79]|4[56]|5[4-68]|6[3-5])|499|5(?:76|97)|746|8(?:3[89]|47|51|63)|9(?:80|9[16])","1(?:267|3(?:7[247]|9[278])|466|5(?:47|58|64)|6(?:3[245]|48|5[4-68]))|499[2468]|5(?:76|97)9|7468|8(?:3(?:8[7-9]|96)|477|51[2-9]|636)|9(?:802|9(?:1[23]|69))|1(?:45|58)[67]","1(?:267|3(?:7[247]|9[278])|466|5(?:47|58|64)|6(?:3[245]|48|5[4-68]))|499[2468]|5(?:769|979[2-69])|7468|8(?:3(?:8[7-9]|96[2457-9])|477|51[2-9]|636[457-9])|9(?:802|9(?:1[23]|69))|1(?:45|58)[67]"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1-$2-$3",["60"],"0$1"],["(\\d)(\\d{4})(\\d{4})","$1-$2-$3",["[36]|4(?:2[09]|7[01])","[36]|4(?:2(?:0|9[02-69])|7(?:0[019]|1))"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1-$2-$3",["1(?:1|5[45]|77|88|9[69])|2(?:2[1-37]|3[0-269]|4[59]|5|6[24]|7[1-358]|8[1369]|9[0-38])|4(?:[28][1-9]|3[0-57]|[45]|6[248]|7[2-579]|9[29])|5(?:2|3[045]|4[0-369]|5[29]|8[02389]|9[0-389])|7(?:2[02-46-9]|34|[58]|6[0249]|7[57]|9[2-6])|8(?:2[124589]|3[27-9]|49|51|6|7[0-468]|8[68]|9[019])|9(?:[23][1-9]|4[15]|5[138]|6[1-3]|7[156]|8[189]|9[1-489])","1(?:1|5(?:4[018]|5[017])|77|88|9[69])|2(?:2(?:[127]|3[014-9])|3[0-269]|4[59]|5(?:[1-3]|5[0-69]|9[19])|62|7(?:[1-35]|8[0189])|8(?:[16]|3[0134]|9[0-5])|9(?:[028]|17))|4(?:2(?:[13-79]|8[014-6])|3[0-57]|[45]|6[248]|7[2-47]|8[1-9])|5(?:2|3[045]|4[0-369]|8[02389]|9[0-3])|7(?:2[02-46-9]|34|[58]|6[0249]|7[57]|9(?:[23]|4[0-59]|5[01569]|6[0167]))|8(?:2(?:[1258]|4[0-39]|9[0-2469])|49|51|6(?:[0-24]|36|5[0-3589]|72|9[01459])|7[0-468]|8[68])|9(?:[23][1-9]|4[15]|5[138]|6[1-3]|7[156]|8[189]|9(?:[1289]|3[34]|4[0178]))|(?:49|55|83)[29]|(?:264|837)[016-9]|2(?:57|93)[015-9]|(?:25[0468]|422|838)[01]|(?:47[59]|59[89]|8(?:6[68]|9))[019]","1(?:1|5(?:4[018]|5[017])|77|88|9[69])|2(?:2[127]|3[0-269]|4[59]|5(?:[1-3]|5[0-69]|9(?:17|99))|6(?:2|4[016-9])|7(?:[1-35]|8[0189])|8(?:[16]|3[0134]|9[0-5])|9(?:[028]|17))|4(?:2(?:[13-79]|8[014-6])|3[0-57]|[45]|6[248]|7[2-47]|9[29])|5(?:2|3[045]|4[0-369]|5[29]|8[02389]|9[0-3])|7(?:2[02-46-9]|34|[58]|6[0249]|7[57]|9(?:[23]|4[0-59]|5[01569]|6[0167]))|8(?:2(?:[1258]|4[0-39]|9[0169])|3(?:[29]|7(?:[017-9]|6[6-8]))|49|51|6(?:[0-24]|36[23]|5(?:[0-389]|5[23])|6(?:[01]|9[178])|72|9[0145])|7[0-468]|8[68])|9(?:4[15]|5[138]|7[156]|8[189]|9(?:[1289]|3(?:31|4[357])|4[0178]))|(?:8294|96)[1-3]|2(?:57|93)[015-9]|(?:223|8699)[014-9]|(?:25[0468]|422|838)[01]|(?:48|8292|9[23])[1-9]|(?:47[59]|59[89]|8(?:68|9))[019]","1(?:1|5(?:4[018]|5[017])|77|88|9[69])|2(?:2[127]|3[0-269]|4[59]|5(?:[1-3]|5[0-69]|7[015-9]|9(?:17|99))|6(?:2|4[016-9])|7(?:[1-35]|8[0189])|8(?:[16]|3[0134]|9[0-5])|9(?:[028]|17|3[015-9]))|4(?:2(?:[13-79]|8[014-6])|3[0-57]|[45]|6[248]|7[2-47]|9[29])|5(?:2|3[045]|4[0-369]|5[29]|8[02389]|9[0-3])|7(?:2[02-46-9]|34|[58]|6[0249]|7[57]|9(?:[23]|4[0-59]|5[01569]|6[0167]))|8(?:2(?:[1258]|4[0-39]|9(?:[019]|4[1-3]|6(?:[0-47-9]|5[01346-9])))|3(?:[29]|7(?:[017-9]|6[6-8]))|49|51|6(?:[0-24]|36[23]|5(?:[0-389]|5[23])|6(?:[01]|9[178])|72|9[0145])|7[0-468]|8[68])|9(?:4[15]|5[138]|6[1-3]|7[156]|8[189]|9(?:[1289]|3(?:31|4[357])|4[0178]))|(?:223|8699)[014-9]|(?:25[0468]|422|838)[01]|(?:48|829(?:2|66)|9[23])[1-9]|(?:47[59]|59[89]|8(?:68|9))[019]"],"0$1"],["(\\d{3})(\\d{2})(\\d{4})","$1-$2-$3",["[14]|[289][2-9]|5[3-9]|7[2-4679]"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1-$2-$3",["800"],"0$1"],["(\\d{2})(\\d{4})(\\d{4})","$1-$2-$3",["[257-9]"],"0$1"]],"0"],"KE":["254","000","(?:[17]\\d\\d|900)\\d{6}|(?:2|80)0\\d{6,7}|[4-6]\\d{6,8}",[7,8,9,10],[["(\\d{2})(\\d{5,7})","$1 $2",["[24-6]"],"0$1"],["(\\d{3})(\\d{6})","$1 $2",["[17]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["[89]"],"0$1"]],"0"],"KG":["996","00","8\\d{9}|(?:[235-8]\\d|99)\\d{7}",[9,10],[["(\\d{4})(\\d{5})","$1 $2",["3(?:1[346]|[24-79])"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[235-79]|88"],"0$1"],["(\\d{3})(\\d{3})(\\d)(\\d{2,3})","$1 $2 $3 $4",["8"],"0$1"]],"0"],"KH":["855","00[14-9]","1\\d{9}|[1-9]\\d{7,8}",[8,9,10],[["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[1-9]"],"0$1"],["(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3",["1"]]],"0"],"KI":["686","00","(?:[37]\\d|6[0-79])\\d{6}|(?:[2-48]\\d|50)\\d{3}",[5,8],0,"0"],"KM":["269","00","[3478]\\d{6}",[7],[["(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3",["[3478]"]]]],"KN":["1","011","(?:[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([2-7]\\d{6})$","869$1",0,"869"],"KP":["850","00|99","85\\d{6}|(?:19\\d|[2-7])\\d{7}",[8,10],[["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["8"],"0$1"],["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["[2-7]"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["1"],"0$1"]],"0"],"KR":["82","00(?:[125689]|3(?:[46]5|91)|7(?:00|27|3|55|6[126]))","00[1-9]\\d{8,11}|(?:[12]|5\\d{3})\\d{7}|[13-6]\\d{9}|(?:[1-6]\\d|80)\\d{7}|[3-6]\\d{4,5}|(?:00|7)0\\d{8}",[5,6,8,9,10,11,12,13,14],[["(\\d{2})(\\d{3,4})","$1-$2",["(?:3[1-3]|[46][1-4]|5[1-5])1"],"0$1"],["(\\d{4})(\\d{4})","$1-$2",["1"]],["(\\d)(\\d{3,4})(\\d{4})","$1-$2-$3",["2"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1-$2-$3",["60|8"],"0$1"],["(\\d{2})(\\d{3,4})(\\d{4})","$1-$2-$3",["[1346]|5[1-5]"],"0$1"],["(\\d{2})(\\d{4})(\\d{4})","$1-$2-$3",["[57]"],"0$1"],["(\\d{2})(\\d{5})(\\d{4})","$1-$2-$3",["5"],"0$1"]],"0",0,"0(8(?:[1-46-8]|5\\d\\d))?"],"KW":["965","00","18\\d{5}|(?:[2569]\\d|41)\\d{6}",[7,8],[["(\\d{4})(\\d{3,4})","$1 $2",["[169]|2(?:[235]|4[1-35-9])|52"]],["(\\d{3})(\\d{5})","$1 $2",["[245]"]]]],"KY":["1","011","(?:345|[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([2-9]\\d{6})$","345$1",0,"345"],"KZ":["7","810","(?:33622|8\\d{8})\\d{5}|[78]\\d{9}",[10,14],0,"8",0,0,0,0,"33|7",0,"8~10"],"LA":["856","00","[23]\\d{9}|3\\d{8}|(?:[235-8]\\d|41)\\d{6}",[8,9,10],[["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["2[13]|3[14]|[4-8]"],"0$1"],["(\\d{2})(\\d{2})(\\d{2})(\\d{3})","$1 $2 $3 $4",["30[013-9]"],"0$1"],["(\\d{2})(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3 $4",["[23]"],"0$1"]],"0"],"LB":["961","00","[27-9]\\d{7}|[13-9]\\d{6}",[7,8],[["(\\d)(\\d{3})(\\d{3})","$1 $2 $3",["[13-69]|7(?:[2-57]|62|8[0-7]|9[04-9])|8[02-9]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[27-9]"]]],"0"],"LC":["1","011","(?:[58]\\d\\d|758|900)\\d{7}",[10],0,"1",0,"1|([2-8]\\d{6})$","758$1",0,"758"],"LI":["423","00","[68]\\d{8}|(?:[2378]\\d|90)\\d{5}",[7,9],[["(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3",["[2379]|8(?:0[09]|7)","[2379]|8(?:0(?:02|9)|7)"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["8"]],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["69"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["6"]]],"0",0,"0|(1001)"],"LK":["94","00","[1-9]\\d{8}",[9],[["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["7"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[1-689]"],"0$1"]],"0"],"LR":["231","00","(?:2|33|5\\d|77|88)\\d{7}|[4-6]\\d{6}",[7,8,9],[["(\\d)(\\d{3})(\\d{3})","$1 $2 $3",["[4-6]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["2"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[3578]"],"0$1"]],"0"],"LS":["266","00","(?:[256]\\d\\d|800)\\d{5}",[8],[["(\\d{4})(\\d{4})","$1 $2",["[2568]"]]]],"LT":["370","00","(?:[3469]\\d|52|[78]0)\\d{6}",[8],[["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["52[0-7]"],"(8-$1)",1],["(\\d{3})(\\d{2})(\\d{3})","$1 $2 $3",["[7-9]"],"8 $1",1],["(\\d{2})(\\d{6})","$1 $2",["37|4(?:[15]|6[1-8])"],"(8-$1)",1],["(\\d{3})(\\d{5})","$1 $2",["[3-6]"],"(8-$1)",1]],"8",0,"[08]"],"LU":["352","00","35[013-9]\\d{4,8}|6\\d{8}|35\\d{2,4}|(?:[2457-9]\\d|3[0-46-9])\\d{2,9}",[4,5,6,7,8,9,10,11],[["(\\d{2})(\\d{3})","$1 $2",["2(?:0[2-689]|[2-9])|[3-57]|8(?:0[2-9]|[13-9])|9(?:0[89]|[2-579])"]],["(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3",["2(?:0[2-689]|[2-9])|[3-57]|8(?:0[2-9]|[13-9])|9(?:0[89]|[2-579])"]],["(\\d{2})(\\d{2})(\\d{3})","$1 $2 $3",["20[2-689]"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{1,2})","$1 $2 $3 $4",["2(?:[0367]|4[3-8])"]],["(\\d{3})(\\d{2})(\\d{3})","$1 $2 $3",["80[01]|90[015]"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{3})","$1 $2 $3 $4",["20"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["6"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{1,2})","$1 $2 $3 $4 $5",["2(?:[0367]|4[3-8])"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{1,5})","$1 $2 $3 $4",["[3-57]|8[13-9]|9(?:0[89]|[2-579])|(?:2|80)[2-9]"]]],0,0,"(15(?:0[06]|1[12]|[35]5|4[04]|6[26]|77|88|99)\\d)"],"LV":["371","00","(?:[268]\\d|90)\\d{6}",[8],[["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[269]|8[01]"]]]],"LY":["218","00","[2-9]\\d{8}",[9],[["(\\d{2})(\\d{7})","$1-$2",["[2-9]"],"0$1"]],"0"],"MA":["212","00","[5-8]\\d{8}",[9],[["(\\d{5})(\\d{4})","$1-$2",["5(?:29|38)","5(?:29[89]|389)","5(?:29[89]|389)0"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["5[45]"],"0$1"],["(\\d{4})(\\d{5})","$1-$2",["5(?:2[2-489]|3[5-9]|9)|892","5(?:2(?:[2-49]|8[235-9])|3[5-9]|9)|892"],"0$1"],["(\\d{2})(\\d{7})","$1-$2",["8"],"0$1"],["(\\d{3})(\\d{6})","$1-$2",["[5-7]"],"0$1"]],"0",0,0,0,0,0,[["5(?:29(?:[189][05]|2[29]|3[01])|389[05])\\d{4}|5(?:2(?:[0-25-7]\\d|3[1-578]|4[02-46-8]|8[0235-7]|90)|3(?:[0-47]\\d|5[02-9]|6[02-8]|8[08]|9[3-9])|(?:4[067]|5[03])\\d)\\d{5}"],["(?:6(?:[0-79]\\d|8[0-247-9])|7(?:[017]\\d|2[0-2]|6[0-8]))\\d{6}"],["80\\d{7}"],["89\\d{7}"],0,0,0,0,["592(?:4[0-2]|93)\\d{4}"]]],"MC":["377","00","(?:[3489]|6\\d)\\d{7}",[8,9],[["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["4"],"0$1"],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[389]"]],["(\\d)(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4 $5",["6"],"0$1"]],"0"],"MD":["373","00","(?:[235-7]\\d|[89]0)\\d{6}",[8],[["(\\d{3})(\\d{5})","$1 $2",["[89]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["22|3"],"0$1"],["(\\d{3})(\\d{2})(\\d{3})","$1 $2 $3",["[25-7]"],"0$1"]],"0"],"ME":["382","00","(?:20|[3-79]\\d)\\d{6}|80\\d{6,7}",[8,9],[["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[2-9]"],"0$1"]],"0"],"MF":["590","00","(?:590|(?:69|80)\\d|976)\\d{6}",[9],0,"0",0,0,0,0,0,[["590(?:0[079]|[14]3|[27][79]|30|5[0-268]|87)\\d{4}"],["69(?:0\\d\\d|1(?:2[2-9]|3[0-5]))\\d{4}"],["80[0-5]\\d{6}"],0,0,0,0,0,["976[01]\\d{5}"]]],"MG":["261","00","[23]\\d{8}",[9],[["(\\d{2})(\\d{2})(\\d{3})(\\d{2})","$1 $2 $3 $4",["[23]"],"0$1"]],"0",0,"0|([24-9]\\d{6})$","20$1"],"MH":["692","011","329\\d{4}|(?:[256]\\d|45)\\d{5}",[7],[["(\\d{3})(\\d{4})","$1-$2",["[2-6]"]]],"1"],"MK":["389","00","[2-578]\\d{7}",[8],[["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["2|34[47]|4(?:[37]7|5[47]|64)"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[347]"],"0$1"],["(\\d{3})(\\d)(\\d{2})(\\d{2})","$1 $2 $3 $4",["[58]"],"0$1"]],"0"],"ML":["223","00","[24-9]\\d{7}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[24-9]"]]]],"MM":["95","00","1\\d{5,7}|95\\d{6}|(?:[4-7]|9[0-46-9])\\d{6,8}|(?:2|8\\d)\\d{5,8}",[6,7,8,9,10],[["(\\d)(\\d{2})(\\d{3})","$1 $2 $3",["16|2"],"0$1"],["(\\d{2})(\\d{2})(\\d{3})","$1 $2 $3",["[45]|6(?:0[23]|[1-689]|7[235-7])|7(?:[0-4]|5[2-7])|8[1-6]"],"0$1"],["(\\d)(\\d{3})(\\d{3,4})","$1 $2 $3",["[12]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[4-7]|8[1-35]"],"0$1"],["(\\d)(\\d{3})(\\d{4,6})","$1 $2 $3",["9(?:2[0-4]|[35-9]|4[137-9])"],"0$1"],["(\\d)(\\d{4})(\\d{4})","$1 $2 $3",["2"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["8"],"0$1"],["(\\d)(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3 $4",["92"],"0$1"],["(\\d)(\\d{5})(\\d{4})","$1 $2 $3",["9"],"0$1"]],"0"],"MN":["976","001","[12]\\d{7,9}|[5-9]\\d{7}",[8,9,10],[["(\\d{2})(\\d{2})(\\d{4})","$1 $2 $3",["[12]1"],"0$1"],["(\\d{4})(\\d{4})","$1 $2",["[5-9]"]],["(\\d{3})(\\d{5,6})","$1 $2",["[12]2[1-3]"],"0$1"],["(\\d{4})(\\d{5,6})","$1 $2",["[12](?:27|3[2-8]|4[2-68]|5[1-4689])","[12](?:27|3[2-8]|4[2-68]|5[1-4689])[0-3]"],"0$1"],["(\\d{5})(\\d{4,5})","$1 $2",["[12]"],"0$1"]],"0"],"MO":["853","00","0800\\d{3}|(?:28|[68]\\d)\\d{6}",[7,8],[["(\\d{4})(\\d{3})","$1 $2",["0"]],["(\\d{4})(\\d{4})","$1 $2",["[268]"]]]],"MP":["1","011","[58]\\d{9}|(?:67|90)0\\d{7}",[10],0,"1",0,"1|([2-9]\\d{6})$","670$1",0,"670"],"MQ":["596","00","(?:69|80)\\d{7}|(?:59|97)6\\d{6}",[9],[["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[569]"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["8"],"0$1"]],"0"],"MR":["222","00","(?:[2-4]\\d\\d|800)\\d{5}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[2-48]"]]]],"MS":["1","011","(?:[58]\\d\\d|664|900)\\d{7}",[10],0,"1",0,"1|([34]\\d{6})$","664$1",0,"664"],"MT":["356","00","3550\\d{4}|(?:[2579]\\d\\d|800)\\d{5}",[8],[["(\\d{4})(\\d{4})","$1 $2",["[2357-9]"]]]],"MU":["230","0(?:0|[24-7]0|3[03])","(?:5|8\\d\\d)\\d{7}|[2-468]\\d{6}",[7,8,10],[["(\\d{3})(\\d{4})","$1 $2",["[2-46]|8[013]"]],["(\\d{4})(\\d{4})","$1 $2",["5"]],["(\\d{5})(\\d{5})","$1 $2",["8"]]],0,0,0,0,0,0,0,"020"],"MV":["960","0(?:0|19)","(?:800|9[0-57-9]\\d)\\d{7}|[34679]\\d{6}",[7,10],[["(\\d{3})(\\d{4})","$1-$2",["[3467]|9[13-9]"]],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["[89]"]]],0,0,0,0,0,0,0,"00"],"MW":["265","00","(?:[129]\\d|31|77|88)\\d{7}|1\\d{6}",[7,9],[["(\\d)(\\d{3})(\\d{3})","$1 $2 $3",["1[2-9]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["2"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[137-9]"],"0$1"]],"0"],"MX":["52","0[09]","1(?:(?:44|99)[1-9]|65[0-689])\\d{7}|(?:1(?:[017]\\d|[235][1-9]|4[0-35-9]|6[0-46-9]|8[1-79]|9[1-8])|[2-9]\\d)\\d{8}",[10,11],[["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["33|5[56]|81"],0,1],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["[2-9]"],0,1],["(\\d)(\\d{2})(\\d{4})(\\d{4})","$2 $3 $4",["1(?:33|5[56]|81)"],0,1],["(\\d)(\\d{3})(\\d{3})(\\d{4})","$2 $3 $4",["1"],0,1]],"01",0,"0(?:[12]|4[45])|1",0,0,0,0,"00"],"MY":["60","00","1\\d{8,9}|(?:3\\d|[4-9])\\d{7}",[8,9,10],[["(\\d)(\\d{3})(\\d{4})","$1-$2 $3",["[4-79]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1-$2 $3",["1(?:[02469]|[378][1-9]|53)|8","1(?:[02469]|[37][1-9]|53|8(?:[1-46-9]|5[7-9]))|8"],"0$1"],["(\\d)(\\d{4})(\\d{4})","$1-$2 $3",["3"],"0$1"],["(\\d)(\\d{3})(\\d{2})(\\d{4})","$1-$2-$3-$4",["1(?:[367]|80)"]],["(\\d{3})(\\d{3})(\\d{4})","$1-$2 $3",["15"],"0$1"],["(\\d{2})(\\d{4})(\\d{4})","$1-$2 $3",["1"],"0$1"]],"0"],"MZ":["258","00","(?:2|8\\d)\\d{7}",[8,9],[["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["2|8[2-79]"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["8"]]]],"NA":["264","00","[68]\\d{7,8}",[8,9],[["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["88"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["6"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["87"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["8"],"0$1"]],"0"],"NC":["687","00","(?:050|[2-57-9]\\d\\d)\\d{3}",[6],[["(\\d{2})(\\d{2})(\\d{2})","$1.$2.$3",["[02-57-9]"]]]],"NE":["227","00","[027-9]\\d{7}",[8],[["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["08"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[089]|2[013]|7[04]"]]]],"NF":["672","00","[13]\\d{5}",[6],[["(\\d{2})(\\d{4})","$1 $2",["1[0-3]"]],["(\\d)(\\d{5})","$1 $2",["[13]"]]],0,0,"([0-258]\\d{4})$","3$1"],"NG":["234","009","(?:[124-7]|9\\d{3})\\d{6}|[1-9]\\d{7}|[78]\\d{9,13}",[7,8,10,11,12,13,14],[["(\\d{2})(\\d{2})(\\d{3})","$1 $2 $3",["78"],"0$1"],["(\\d)(\\d{3})(\\d{3,4})","$1 $2 $3",["[12]|9(?:0[3-9]|[1-9])"],"0$1"],["(\\d{2})(\\d{3})(\\d{2,3})","$1 $2 $3",["[3-7]|8[2-9]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["[7-9]"],"0$1"],["(\\d{3})(\\d{4})(\\d{4,5})","$1 $2 $3",["[78]"],"0$1"],["(\\d{3})(\\d{5})(\\d{5,6})","$1 $2 $3",["[78]"],"0$1"]],"0"],"NI":["505","00","(?:1800|[25-8]\\d{3})\\d{4}",[8],[["(\\d{4})(\\d{4})","$1 $2",["[125-8]"]]]],"NL":["31","00","(?:[124-7]\\d\\d|3(?:[02-9]\\d|1[0-8]))\\d{6}|8\\d{6,9}|9\\d{6,10}|1\\d{4,5}",[5,6,7,8,9,10,11],[["(\\d{3})(\\d{4,7})","$1 $2",["[89]0"],"0$1"],["(\\d{2})(\\d{7})","$1 $2",["66"],"0$1"],["(\\d)(\\d{8})","$1 $2",["6"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["1[16-8]|2[259]|3[124]|4[17-9]|5[124679]"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[1-578]|91"],"0$1"],["(\\d{3})(\\d{3})(\\d{5})","$1 $2 $3",["9"],"0$1"]],"0"],"NO":["47","00","(?:0|[2-9]\\d{3})\\d{4}",[5,8],[["(\\d{3})(\\d{2})(\\d{3})","$1 $2 $3",["[489]|59"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[235-7]"]]],0,0,0,0,0,"[02-689]|7[0-8]"],"NP":["977","00","(?:1\\d|9)\\d{9}|[1-9]\\d{7}",[8,10,11],[["(\\d)(\\d{7})","$1-$2",["1[2-6]"],"0$1"],["(\\d{2})(\\d{6})","$1-$2",["1[01]|[2-8]|9(?:[1-59]|[67][2-6])"],"0$1"],["(\\d{3})(\\d{7})","$1-$2",["9"]]],"0"],"NR":["674","00","(?:444|(?:55|8\\d)\\d|666)\\d{4}",[7],[["(\\d{3})(\\d{4})","$1 $2",["[4-68]"]]]],"NU":["683","00","(?:[47]|888\\d)\\d{3}",[4,7],[["(\\d{3})(\\d{4})","$1 $2",["8"]]]],"NZ":["64","0(?:0|161)","[29]\\d{7,9}|50\\d{5}(?:\\d{2,3})?|6[0-35-9]\\d{6}|7\\d{7,8}|8\\d{4,9}|(?:11\\d|[34])\\d{7}",[5,6,7,8,9,10],[["(\\d{2})(\\d{3,8})","$1 $2",["8[1-579]"],"0$1"],["(\\d{3})(\\d{2})(\\d{2,3})","$1 $2 $3",["50[036-8]|[89]0","50(?:[0367]|88)|[89]0"],"0$1"],["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["24|[346]|7[2-57-9]|9[2-9]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["2(?:10|74)|[59]|80"],"0$1"],["(\\d{2})(\\d{3,4})(\\d{4})","$1 $2 $3",["1|2[028]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,5})","$1 $2 $3",["2(?:[169]|7[0-35-9])|7|86"],"0$1"]],"0",0,0,0,0,0,0,"00"],"OM":["968","00","(?:1505|[279]\\d{3}|500)\\d{4}|800\\d{5,6}",[7,8,9],[["(\\d{3})(\\d{4,6})","$1 $2",["[58]"]],["(\\d{2})(\\d{6})","$1 $2",["2"]],["(\\d{4})(\\d{4})","$1 $2",["[179]"]]]],"PA":["507","00","(?:00800|8\\d{3})\\d{6}|[68]\\d{7}|[1-57-9]\\d{6}",[7,8,10,11],[["(\\d{3})(\\d{4})","$1-$2",["[1-57-9]"]],["(\\d{4})(\\d{4})","$1-$2",["[68]"]],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["8"]]]],"PE":["51","00|19(?:1[124]|77|90)00","(?:[14-8]|9\\d)\\d{7}",[8,9],[["(\\d{3})(\\d{5})","$1 $2",["80"],"(0$1)"],["(\\d)(\\d{7})","$1 $2",["1"],"(0$1)"],["(\\d{2})(\\d{6})","$1 $2",["[4-8]"],"(0$1)"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["9"]]],"0",0,0,0,0,0,0,"00"," Anexo "],"PF":["689","00","4\\d{5}(?:\\d{2})?|8\\d{7,8}",[6,8,9],[["(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3",["44"]],["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["4|8[7-9]"]],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["8"]]]],"PG":["675","00|140[1-3]","(?:180|[78]\\d{3})\\d{4}|(?:[2-589]\\d|64)\\d{5}",[7,8],[["(\\d{3})(\\d{4})","$1 $2",["18|[2-69]|85"]],["(\\d{4})(\\d{4})","$1 $2",["[78]"]]],0,0,0,0,0,0,0,"00"],"PH":["63","00","(?:[2-7]|9\\d)\\d{8}|2\\d{5}|(?:1800|8)\\d{7,9}",[6,8,9,10,11,12,13],[["(\\d)(\\d{5})","$1 $2",["2"],"(0$1)"],["(\\d{4})(\\d{4,6})","$1 $2",["3(?:23|39|46)|4(?:2[3-6]|[35]9|4[26]|76)|544|88[245]|(?:52|64|86)2","3(?:230|397|461)|4(?:2(?:35|[46]4|51)|396|4(?:22|63)|59[347]|76[15])|5(?:221|446)|642[23]|8(?:622|8(?:[24]2|5[13]))"],"(0$1)"],["(\\d{5})(\\d{4})","$1 $2",["346|4(?:27|9[35])|883","3469|4(?:279|9(?:30|56))|8834"],"(0$1)"],["(\\d)(\\d{4})(\\d{4})","$1 $2 $3",["2"],"(0$1)"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[3-7]|8[2-8]"],"(0$1)"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["[89]"],"0$1"],["(\\d{4})(\\d{3})(\\d{4})","$1 $2 $3",["1"]],["(\\d{4})(\\d{1,2})(\\d{3})(\\d{4})","$1 $2 $3 $4",["1"]]],"0"],"PK":["92","00","122\\d{6}|[24-8]\\d{10,11}|9(?:[013-9]\\d{8,10}|2(?:[01]\\d\\d|2(?:[06-8]\\d|1[01]))\\d{7})|(?:[2-8]\\d{3}|92(?:[0-7]\\d|8[1-9]))\\d{6}|[24-9]\\d{8}|[89]\\d{7}",[8,9,10,11,12],[["(\\d{3})(\\d{3})(\\d{2,7})","$1 $2 $3",["[89]0"],"0$1"],["(\\d{4})(\\d{5})","$1 $2",["1"]],["(\\d{3})(\\d{6,7})","$1 $2",["2(?:3[2358]|4[2-4]|9[2-8])|45[3479]|54[2-467]|60[468]|72[236]|8(?:2[2-689]|3[23578]|4[3478]|5[2356])|9(?:2[2-8]|3[27-9]|4[2-6]|6[3569]|9[25-8])","9(?:2[3-8]|98)|(?:2(?:3[2358]|4[2-4]|9[2-8])|45[3479]|54[2-467]|60[468]|72[236]|8(?:2[2-689]|3[23578]|4[3478]|5[2356])|9(?:22|3[27-9]|4[2-6]|6[3569]|9[25-7]))[2-9]"],"(0$1)"],["(\\d{2})(\\d{7,8})","$1 $2",["(?:2[125]|4[0-246-9]|5[1-35-7]|6[1-8]|7[14]|8[16]|91)[2-9]"],"(0$1)"],["(\\d{5})(\\d{5})","$1 $2",["58"],"(0$1)"],["(\\d{3})(\\d{7})","$1 $2",["3"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3 $4",["2[125]|4[0-246-9]|5[1-35-7]|6[1-8]|7[14]|8[16]|91"],"(0$1)"],["(\\d{3})(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3 $4",["[24-9]"],"(0$1)"]],"0"],"PL":["48","00","6\\d{5}(?:\\d{2})?|8\\d{9}|[1-9]\\d{6}(?:\\d{2})?",[6,7,8,9,10],[["(\\d{5})","$1",["19"]],["(\\d{3})(\\d{3})","$1 $2",["11|64"]],["(\\d{2})(\\d{2})(\\d{3})","$1 $2 $3",["(?:1[2-8]|2[2-69]|3[2-4]|4[1-468]|5[24-689]|6[1-3578]|7[14-7]|8[1-79]|9[145])1","(?:1[2-8]|2[2-69]|3[2-4]|4[1-468]|5[24-689]|6[1-3578]|7[14-7]|8[1-79]|9[145])19"]],["(\\d{3})(\\d{2})(\\d{2,3})","$1 $2 $3",["64"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["21|39|45|5[0137]|6[0469]|7[02389]|8(?:0[14]|8)"]],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["1[2-8]|[2-7]|8[1-79]|9[145]"]],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["8"]]]],"PM":["508","00","(?:[45]|80\\d\\d)\\d{5}",[6,9],[["(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3",["[45]"],"0$1"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["8"],"0$1"]],"0"],"PR":["1","011","(?:[589]\\d\\d|787)\\d{7}",[10],0,"1",0,0,0,0,"787|939"],"PS":["970","00","[2489]2\\d{6}|(?:1\\d|5)\\d{8}",[8,9,10],[["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["[2489]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["5"],"0$1"],["(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3",["1"]]],"0"],"PT":["351","00","1693\\d{5}|(?:[26-9]\\d|30)\\d{7}",[9],[["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["2[12]"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["16|[236-9]"]]]],"PW":["680","01[12]","(?:[24-8]\\d\\d|345|900)\\d{4}",[7],[["(\\d{3})(\\d{4})","$1 $2",["[2-9]"]]]],"PY":["595","00","59\\d{4,6}|9\\d{5,10}|(?:[2-46-8]\\d|5[0-8])\\d{4,7}",[6,7,8,9,10,11],[["(\\d{3})(\\d{3,6})","$1 $2",["[2-9]0"],"0$1"],["(\\d{2})(\\d{5})","$1 $2",["[26]1|3[289]|4[1246-8]|7[1-3]|8[1-36]"],"(0$1)"],["(\\d{3})(\\d{4,5})","$1 $2",["2[279]|3[13-5]|4[359]|5|6(?:[34]|7[1-46-8])|7[46-8]|85"],"(0$1)"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["2[14-68]|3[26-9]|4[1246-8]|6(?:1|75)|7[1-35]|8[1-36]"],"(0$1)"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["87"]],["(\\d{3})(\\d{6})","$1 $2",["9(?:[5-79]|8[1-6])"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[2-8]"],"0$1"],["(\\d{4})(\\d{3})(\\d{4})","$1 $2 $3",["9"]]],"0"],"QA":["974","00","[2-7]\\d{7}|800\\d{4}(?:\\d{2})?|2\\d{6}",[7,8,9],[["(\\d{3})(\\d{4})","$1 $2",["2[126]|8"]],["(\\d{4})(\\d{4})","$1 $2",["[2-7]"]]]],"RE":["262","00","976\\d{6}|(?:26|[68]\\d)\\d{7}",[9],[["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[2689]"],"0$1"]],"0",0,0,0,0,"26[23]|69|[89]"],"RO":["40","00","(?:[2378]\\d|90)\\d{7}|[23]\\d{5}",[6,9],[["(\\d{3})(\\d{3})","$1 $2",["2[3-6]","2[3-6]\\d9"],"0$1"],["(\\d{2})(\\d{4})","$1 $2",["219|31"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[23]1"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[237-9]"],"0$1"]],"0",0,0,0,0,0,0,0," int "],"RS":["381","00","38[02-9]\\d{6,9}|6\\d{7,9}|90\\d{4,8}|38\\d{5,6}|(?:7\\d\\d|800)\\d{3,9}|(?:[12]\\d|3[0-79])\\d{5,10}",[6,7,8,9,10,11,12],[["(\\d{3})(\\d{3,9})","$1 $2",["(?:2[389]|39)0|[7-9]"],"0$1"],["(\\d{2})(\\d{5,10})","$1 $2",["[1-36]"],"0$1"]],"0"],"RU":["7","810","8\\d{13}|[347-9]\\d{9}",[10,14],[["(\\d{4})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["7(?:1[0-8]|2[1-9])","7(?:1(?:[0-6]2|7|8[27])|2(?:1[23]|[2-9]2))","7(?:1(?:[0-6]2|7|8[27])|2(?:13[03-69]|62[013-9]))|72[1-57-9]2"],"8 ($1)",1],["(\\d{5})(\\d)(\\d{2})(\\d{2})","$1 $2 $3 $4",["7(?:1[0-68]|2[1-9])","7(?:1(?:[06][3-6]|[18]|2[35]|[3-5][3-5])|2(?:[13][3-5]|[24-689]|7[457]))","7(?:1(?:0(?:[356]|4[023])|[18]|2(?:3[013-9]|5)|3[45]|43[013-79]|5(?:3[1-8]|4[1-7]|5)|6(?:3[0-35-9]|[4-6]))|2(?:1(?:3[178]|[45])|[24-689]|3[35]|7[457]))|7(?:14|23)4[0-8]|71(?:33|45)[1-79]"],"8 ($1)",1],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["7"],"8 ($1)",1],["(\\d{3})(\\d{3})(\\d{2})(\\d{2})","$1 $2-$3-$4",["[349]|8(?:[02-7]|1[1-8])"],"8 ($1)",1],["(\\d{4})(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3 $4",["8"],"8 ($1)"]],"8",0,0,0,0,"3[04-689]|[489]",0,"8~10"],"RW":["250","00","(?:06|[27]\\d\\d|[89]00)\\d{6}",[8,9],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["0"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[7-9]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["2"]]],"0"],"SA":["966","00","92\\d{7}|(?:[15]|8\\d)\\d{8}",[9,10],[["(\\d{4})(\\d{5})","$1 $2",["9"]],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["1"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["5"],"0$1"],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["81"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["8"]]],"0"],"SB":["677","0[01]","(?:[1-6]|[7-9]\\d\\d)\\d{4}",[5,7],[["(\\d{2})(\\d{5})","$1 $2",["7|8[4-9]|9(?:[1-8]|9[0-8])"]]]],"SC":["248","010|0[0-2]","800\\d{4}|(?:[249]\\d|64)\\d{5}",[7],[["(\\d)(\\d{3})(\\d{3})","$1 $2 $3",["[246]|9[57]"]]],0,0,0,0,0,0,0,"00"],"SD":["249","00","[19]\\d{8}",[9],[["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[19]"],"0$1"]],"0"],"SE":["46","00","(?:[26]\\d\\d|9)\\d{9}|[1-9]\\d{8}|[1-689]\\d{7}|[1-4689]\\d{6}|2\\d{5}",[6,7,8,9,10],[["(\\d{2})(\\d{2,3})(\\d{2})","$1-$2 $3",["20"],"0$1",0,"$1 $2 $3"],["(\\d{3})(\\d{4})","$1-$2",["9(?:00|39|44|9)"],"0$1",0,"$1 $2"],["(\\d{2})(\\d{3})(\\d{2})","$1-$2 $3",["[12][136]|3[356]|4[0246]|6[03]|90[1-9]"],"0$1",0,"$1 $2 $3"],["(\\d)(\\d{2,3})(\\d{2})(\\d{2})","$1-$2 $3 $4",["8"],"0$1",0,"$1 $2 $3 $4"],["(\\d{3})(\\d{2,3})(\\d{2})","$1-$2 $3",["1[2457]|2(?:[247-9]|5[0138])|3[0247-9]|4[1357-9]|5[0-35-9]|6(?:[125689]|4[02-57]|7[0-2])|9(?:[125-8]|3[02-5]|4[0-3])"],"0$1",0,"$1 $2 $3"],["(\\d{3})(\\d{2,3})(\\d{3})","$1-$2 $3",["9(?:00|39|44)"],"0$1",0,"$1 $2 $3"],["(\\d{2})(\\d{2,3})(\\d{2})(\\d{2})","$1-$2 $3 $4",["1[13689]|2[0136]|3[1356]|4[0246]|54|6[03]|90[1-9]"],"0$1",0,"$1 $2 $3 $4"],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1-$2 $3 $4",["10|7"],"0$1",0,"$1 $2 $3 $4"],["(\\d)(\\d{3})(\\d{3})(\\d{2})","$1-$2 $3 $4",["8"],"0$1",0,"$1 $2 $3 $4"],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1-$2 $3 $4",["[13-5]|2(?:[247-9]|5[0138])|6(?:[124-689]|7[0-2])|9(?:[125-8]|3[02-5]|4[0-3])"],"0$1",0,"$1 $2 $3 $4"],["(\\d{3})(\\d{2})(\\d{2})(\\d{3})","$1-$2 $3 $4",["9"],"0$1",0,"$1 $2 $3 $4"],["(\\d{3})(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1-$2 $3 $4 $5",["[26]"],"0$1",0,"$1 $2 $3 $4 $5"]],"0"],"SG":["65","0[0-3]\\d","(?:(?:1\\d|8)\\d\\d|7000)\\d{7}|[3689]\\d{7}",[8,10,11],[["(\\d{4})(\\d{4})","$1 $2",["[369]|8(?:0[1-5]|[1-9])"]],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["8"]],["(\\d{4})(\\d{4})(\\d{3})","$1 $2 $3",["7"]],["(\\d{4})(\\d{3})(\\d{4})","$1 $2 $3",["1"]]]],"SH":["290","00","(?:[256]\\d|8)\\d{3}",[4,5],0,0,0,0,0,0,"[256]"],"SI":["386","00|10(?:22|66|88|99)","[1-7]\\d{7}|8\\d{4,7}|90\\d{4,6}",[5,6,7,8],[["(\\d{2})(\\d{3,6})","$1 $2",["8[09]|9"],"0$1"],["(\\d{3})(\\d{5})","$1 $2",["59|8"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[37][01]|4[0139]|51|6"],"0$1"],["(\\d)(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[1-57]"],"(0$1)"]],"0",0,0,0,0,0,0,"00"],"SJ":["47","00","0\\d{4}|(?:[489]\\d|[57]9)\\d{6}",[5,8],0,0,0,0,0,0,"79"],"SK":["421","00","[2-689]\\d{8}|[2-59]\\d{6}|[2-5]\\d{5}",[6,7,9],[["(\\d)(\\d{2})(\\d{3,4})","$1 $2 $3",["21"],"0$1"],["(\\d{2})(\\d{2})(\\d{2,3})","$1 $2 $3",["[3-5][1-8]1","[3-5][1-8]1[67]"],"0$1"],["(\\d)(\\d{3})(\\d{3})(\\d{2})","$1/$2 $3 $4",["2"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[689]"],"0$1"],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1/$2 $3 $4",["[3-5]"],"0$1"]],"0"],"SL":["232","00","(?:[237-9]\\d|66)\\d{6}",[8],[["(\\d{2})(\\d{6})","$1 $2",["[236-9]"],"(0$1)"]],"0"],"SM":["378","00","(?:0549|[5-7]\\d)\\d{6}",[8,10],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[5-7]"]],["(\\d{4})(\\d{6})","$1 $2",["0"]]],0,0,"([89]\\d{5})$","0549$1"],"SN":["221","00","(?:[378]\\d|93)\\d{7}",[9],[["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["8"]],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[379]"]]]],"SO":["252","00","[346-9]\\d{8}|[12679]\\d{7}|[1-5]\\d{6}|[1348]\\d{5}",[6,7,8,9],[["(\\d{2})(\\d{4})","$1 $2",["8[125]"]],["(\\d{6})","$1",["[134]"]],["(\\d)(\\d{6})","$1 $2",["[15]|2[0-79]|3[0-46-8]|4[0-7]"]],["(\\d)(\\d{7})","$1 $2",["24|[67]"]],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[3478]|64|90"]],["(\\d{2})(\\d{5,7})","$1 $2",["1|28|6(?:0[5-7]|[1-35-9])|9[2-9]"]]],"0"],"SR":["597","00","(?:[2-5]|68|[78]\\d)\\d{5}",[6,7],[["(\\d{2})(\\d{2})(\\d{2})","$1-$2-$3",["56"]],["(\\d{3})(\\d{3})","$1-$2",["[2-5]"]],["(\\d{3})(\\d{4})","$1-$2",["[6-8]"]]]],"SS":["211","00","[19]\\d{8}",[9],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[19]"],"0$1"]],"0"],"ST":["239","00","(?:22|9\\d)\\d{5}",[7],[["(\\d{3})(\\d{4})","$1 $2",["[29]"]]]],"SV":["503","00","[267]\\d{7}|[89]00\\d{4}(?:\\d{4})?",[7,8,11],[["(\\d{3})(\\d{4})","$1 $2",["[89]"]],["(\\d{4})(\\d{4})","$1 $2",["[267]"]],["(\\d{3})(\\d{4})(\\d{4})","$1 $2 $3",["[89]"]]]],"SX":["1","011","7215\\d{6}|(?:[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|(5\\d{6})$","721$1",0,"721"],"SY":["963","00","[1-39]\\d{8}|[1-5]\\d{7}",[8,9],[["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[1-5]"],"0$1",1],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["9"],"0$1",1]],"0"],"SZ":["268","00","0800\\d{4}|(?:[237]\\d|900)\\d{6}",[8,9],[["(\\d{4})(\\d{4})","$1 $2",["[0237]"]],["(\\d{5})(\\d{4})","$1 $2",["9"]]]],"TA":["290","00","8\\d{3}",[4],0,0,0,0,0,0,"8"],"TC":["1","011","(?:[58]\\d\\d|649|900)\\d{7}",[10],0,"1",0,"1|([2-479]\\d{6})$","649$1",0,"649"],"TD":["235","00|16","(?:22|[69]\\d|77)\\d{6}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[2679]"]]],0,0,0,0,0,0,0,"00"],"TG":["228","00","[279]\\d{7}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[279]"]]]],"TH":["66","00[1-9]","(?:001800|[2-57]|[689]\\d)\\d{7}|1\\d{7,9}",[8,9,10,13],[["(\\d)(\\d{3})(\\d{4})","$1 $2 $3",["2"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[13-9]"],"0$1"],["(\\d{4})(\\d{3})(\\d{3})","$1 $2 $3",["1"]]],"0"],"TJ":["992","810","(?:00|[1-57-9]\\d)\\d{7}",[9],[["(\\d{6})(\\d)(\\d{2})","$1 $2 $3",["331","3317"]],["(\\d{3})(\\d{2})(\\d{4})","$1 $2 $3",["[34]7|91[78]"]],["(\\d{4})(\\d)(\\d{4})","$1 $2 $3",["3[1-5]"]],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[0-57-9]"]]],0,0,0,0,0,0,0,"8~10"],"TK":["690","00","[2-47]\\d{3,6}",[4,5,6,7]],"TL":["670","00","7\\d{7}|(?:[2-47]\\d|[89]0)\\d{5}",[7,8],[["(\\d{3})(\\d{4})","$1 $2",["[2-489]|70"]],["(\\d{4})(\\d{4})","$1 $2",["7"]]]],"TM":["993","810","[1-6]\\d{7}",[8],[["(\\d{2})(\\d{2})(\\d{2})(\\d{2})","$1 $2-$3-$4",["12"],"(8 $1)"],["(\\d{3})(\\d)(\\d{2})(\\d{2})","$1 $2-$3-$4",["[1-5]"],"(8 $1)"],["(\\d{2})(\\d{6})","$1 $2",["6"],"8 $1"]],"8",0,0,0,0,0,0,"8~10"],"TN":["216","00","[2-57-9]\\d{7}",[8],[["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[2-57-9]"]]]],"TO":["676","00","(?:0800|(?:[5-8]\\d\\d|999)\\d)\\d{3}|[2-8]\\d{4}",[5,7],[["(\\d{2})(\\d{3})","$1-$2",["[2-4]|50|6[09]|7[0-24-69]|8[05]"]],["(\\d{4})(\\d{3})","$1 $2",["0"]],["(\\d{3})(\\d{4})","$1 $2",["[5-9]"]]]],"TR":["90","00","4\\d{6}|8\\d{11,12}|(?:[2-58]\\d\\d|900)\\d{7}",[7,10,12,13],[["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["512|8[01589]|90"],"0$1",1],["(\\d{3})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["5(?:[0-59]|61)","5(?:[0-59]|616)","5(?:[0-59]|6161)"],"0$1",1],["(\\d{3})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[24][1-8]|3[1-9]"],"(0$1)",1],["(\\d{3})(\\d{3})(\\d{6,7})","$1 $2 $3",["80"],"0$1",1]],"0"],"TT":["1","011","(?:[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([2-46-8]\\d{6})$","868$1",0,"868"],"TV":["688","00","(?:2|7\\d\\d|90)\\d{4}",[5,6,7],[["(\\d{2})(\\d{3})","$1 $2",["2"]],["(\\d{2})(\\d{4})","$1 $2",["90"]],["(\\d{2})(\\d{5})","$1 $2",["7"]]]],"TW":["886","0(?:0[25-79]|19)","[2-689]\\d{8}|7\\d{9,10}|[2-8]\\d{7}|2\\d{6}",[7,8,9,10,11],[["(\\d{2})(\\d)(\\d{4})","$1 $2 $3",["202"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["[258]0"],"0$1"],["(\\d)(\\d{3,4})(\\d{4})","$1 $2 $3",["[23568]|4(?:0[02-48]|[1-47-9])|7[1-9]","[23568]|4(?:0[2-48]|[1-47-9])|(?:400|7)[1-9]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[49]"],"0$1"],["(\\d{2})(\\d{4})(\\d{4,5})","$1 $2 $3",["7"],"0$1"]],"0",0,0,0,0,0,0,0,"#"],"TZ":["255","00[056]","(?:[26-8]\\d|41|90)\\d{7}",[9],[["(\\d{3})(\\d{2})(\\d{4})","$1 $2 $3",["[89]"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[24]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[67]"],"0$1"]],"0"],"UA":["380","00","[89]\\d{9}|[3-9]\\d{8}",[9,10],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["6[12][29]|(?:3[1-8]|4[136-8]|5[12457]|6[49])2|(?:56|65)[24]","6[12][29]|(?:35|4[1378]|5[12457]|6[49])2|(?:56|65)[24]|(?:3[1-46-8]|46)2[013-9]"],"0$1"],["(\\d{4})(\\d{5})","$1 $2",["3[1-8]|4(?:[1367]|[45][6-9]|8[4-6])|5(?:[1-5]|6[0135689]|7[4-6])|6(?:[12][3-7]|[459])","3[1-8]|4(?:[1367]|[45][6-9]|8[4-6])|5(?:[1-5]|6(?:[015689]|3[02389])|7[4-6])|6(?:[12][3-7]|[459])"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[3-7]|89|9[1-9]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["[89]"],"0$1"]],"0",0,0,0,0,0,0,"0~0"],"UG":["256","00[057]","800\\d{6}|(?:[29]0|[347]\\d)\\d{7}",[9],[["(\\d{4})(\\d{5})","$1 $2",["202","2024"],"0$1"],["(\\d{3})(\\d{6})","$1 $2",["[27-9]|4(?:6[45]|[7-9])"],"0$1"],["(\\d{2})(\\d{7})","$1 $2",["[34]"],"0$1"]],"0"],"US":["1","011","[2-9]\\d{9}|3\\d{6}",[10],[["(\\d{3})(\\d{4})","$1-$2",["310"],0,1],["(\\d{3})(\\d{3})(\\d{4})","($1) $2-$3",["[2-9]"],0,1,"$1-$2-$3"]],"1",0,0,0,0,0,[["5(?:05(?:[2-57-9]\\d\\d|6(?:[0-35-9]\\d|44))|82(?:2(?:0[0-3]|[268]2)|3(?:0[02]|22|33)|4(?:00|4[24]|65|82)|5(?:00|29|58|83)|6(?:00|66|82)|7(?:58|77)|8(?:00|42|5[25]|88)|9(?:00|9[89])))\\d{4}|(?:2(?:0[1-35-9]|1[02-9]|2[03-589]|3[149]|4[08]|5[1-46]|6[0279]|7[0269]|8[13])|3(?:0[1-57-9]|1[02-9]|2[01356]|3[0-24679]|4[167]|5[12]|6[014]|8[056])|4(?:0[124-9]|1[02-579]|2[3-5]|3[0245]|4[023578]|58|6[349]|7[0589]|8[04])|5(?:0[1-47-9]|1[0235-8]|20|3[0149]|4[01]|5[19]|6[1-47]|7[0-5]|8[056])|6(?:0[1-35-9]|1[024-9]|2[03689]|[34][016]|5[01679]|6[0-279]|78|8[0-29])|7(?:0[1-46-8]|1[2-9]|2[04-7]|3[1247]|4[037]|5[47]|6[02359]|7[0-59]|8[156])|8(?:0[1-68]|1[02-8]|2[068]|3[0-289]|4[03578]|5[046-9]|6[02-5]|7[028])|9(?:0[1346-9]|1[02-9]|2[0589]|3[0146-8]|4[01357-9]|5[12469]|7[0-389]|8[04-69]))[2-9]\\d{6}"],[""],["8(?:00|33|44|55|66|77|88)[2-9]\\d{6}"],["900[2-9]\\d{6}"],["52(?:3(?:[2-46-9][02-9]\\d|5(?:[02-46-9]\\d|5[0-46-9]))|4(?:[2-478][02-9]\\d|5(?:[034]\\d|2[024-9]|5[0-46-9])|6(?:0[1-9]|[2-9]\\d)|9(?:[05-9]\\d|2[0-5]|49)))\\d{4}|52[34][2-9]1[02-9]\\d{4}|5(?:00|2[125-7]|33|44|66|77|88)[2-9]\\d{6}"]]],"UY":["598","0(?:0|1[3-9]\\d)","4\\d{9}|[1249]\\d{7}|(?:[49]\\d|80)\\d{5}",[7,8,10],[["(\\d{3})(\\d{4})","$1 $2",["405|8|90"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["9"],"0$1"],["(\\d{4})(\\d{4})","$1 $2",["[124]"]],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["4"],"0$1"]],"0",0,0,0,0,0,0,"00"," int. "],"UZ":["998","810","(?:33|55|[679]\\d|88)\\d{7}",[9],[["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[35-9]"],"8 $1"]],"8",0,0,0,0,0,0,"8~10"],"VA":["39","00","0\\d{5,10}|3[0-8]\\d{7,10}|55\\d{8}|8\\d{5}(?:\\d{2,4})?|(?:1\\d|39)\\d{7,8}",[6,7,8,9,10,11],0,0,0,0,0,0,"06698"],"VC":["1","011","(?:[58]\\d\\d|784|900)\\d{7}",[10],0,"1",0,"1|([2-7]\\d{6})$","784$1",0,"784"],"VE":["58","00","[68]00\\d{7}|(?:[24]\\d|[59]0)\\d{8}",[10],[["(\\d{3})(\\d{7})","$1-$2",["[24-689]"],"0$1"]],"0"],"VG":["1","011","(?:284|[58]\\d\\d|900)\\d{7}",[10],0,"1",0,"1|([2-578]\\d{6})$","284$1",0,"284"],"VI":["1","011","[58]\\d{9}|(?:34|90)0\\d{7}",[10],0,"1",0,"1|([2-9]\\d{6})$","340$1",0,"340"],"VN":["84","00","[12]\\d{9}|[135-9]\\d{8}|[16]\\d{7}|[16-8]\\d{6}",[7,8,9,10],[["(\\d{2})(\\d{5})","$1 $2",["80"],"0$1",1],["(\\d{4})(\\d{4,6})","$1 $2",["1"],0,1],["(\\d{2})(\\d{3})(\\d{2})(\\d{2})","$1 $2 $3 $4",["[69]"],"0$1",1],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[3578]"],"0$1",1],["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["2[48]"],"0$1",1],["(\\d{3})(\\d{4})(\\d{3})","$1 $2 $3",["2"],"0$1",1]],"0"],"VU":["678","00","[57-9]\\d{6}|(?:[238]\\d|48)\\d{3}",[5,7],[["(\\d{3})(\\d{4})","$1 $2",["[57-9]"]]]],"WF":["681","00","(?:40|72)\\d{4}|8\\d{5}(?:\\d{3})?",[6,9],[["(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3",["[478]"]],["(\\d{3})(\\d{2})(\\d{2})(\\d{2})","$1 $2 $3 $4",["8"]]]],"WS":["685","0","(?:[2-6]|8\\d{5})\\d{4}|[78]\\d{6}|[68]\\d{5}",[5,6,7,10],[["(\\d{5})","$1",["[2-5]|6[1-9]"]],["(\\d{3})(\\d{3,7})","$1 $2",["[68]"]],["(\\d{2})(\\d{5})","$1 $2",["7"]]]],"XK":["383","00","[23]\\d{7,8}|(?:4\\d\\d|[89]00)\\d{5}",[8,9],[["(\\d{3})(\\d{5})","$1 $2",["[89]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3})","$1 $2 $3",["[2-4]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[23]"],"0$1"]],"0"],"YE":["967","00","(?:1|7\\d)\\d{7}|[1-7]\\d{6}",[7,8,9],[["(\\d)(\\d{3})(\\d{3,4})","$1 $2 $3",["[1-6]|7[24-68]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["7"],"0$1"]],"0"],"YT":["262","00","80\\d{7}|(?:26|63)9\\d{6}",[9],0,"0",0,0,0,0,"269|63"],"ZA":["27","00","[1-79]\\d{8}|8\\d{4,9}",[5,6,7,8,9,10],[["(\\d{2})(\\d{3,4})","$1 $2",["8[1-4]"],"0$1"],["(\\d{2})(\\d{3})(\\d{2,3})","$1 $2 $3",["8[1-4]"],"0$1"],["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["860"],"0$1"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["[1-9]"],"0$1"],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["8"],"0$1"]],"0"],"ZM":["260","00","800\\d{6}|(?:21|63|[79]\\d)\\d{7}",[9],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[28]"],"0$1"],["(\\d{2})(\\d{7})","$1 $2",["[79]"],"0$1"]],"0"],"ZW":["263","00","2(?:[0-57-9]\\d{6,8}|6[0-24-9]\\d{6,7})|[38]\\d{9}|[35-8]\\d{8}|[3-6]\\d{7}|[1-689]\\d{6}|[1-3569]\\d{5}|[1356]\\d{4}",[5,6,7,8,9,10],[["(\\d{3})(\\d{3,5})","$1 $2",["2(?:0[45]|2[278]|[49]8)|3(?:[09]8|17)|6(?:[29]8|37|75)|[23][78]|(?:33|5[15]|6[68])[78]"],"0$1"],["(\\d)(\\d{3})(\\d{2,4})","$1 $2 $3",["[49]"],"0$1"],["(\\d{3})(\\d{4})","$1 $2",["80"],"0$1"],["(\\d{2})(\\d{7})","$1 $2",["24|8[13-59]|(?:2[05-79]|39|5[45]|6[15-8])2","2(?:02[014]|4|[56]20|[79]2)|392|5(?:42|525)|6(?:[16-8]21|52[013])|8[13-59]"],"(0$1)"],["(\\d{2})(\\d{3})(\\d{4})","$1 $2 $3",["7"],"0$1"],["(\\d{3})(\\d{3})(\\d{3,4})","$1 $2 $3",["2(?:1[39]|2[0157]|[378]|[56][14])|3(?:12|29)","2(?:1[39]|2[0157]|[378]|[56][14])|3(?:123|29)"],"0$1"],["(\\d{4})(\\d{6})","$1 $2",["8"],"0$1"],["(\\d{2})(\\d{3,5})","$1 $2",["1|2(?:0[0-36-9]|12|29|[56])|3(?:1[0-689]|[24-6])|5(?:[0236-9]|1[2-4])|6(?:[013-59]|7[0-46-9])|(?:33|55|6[68])[0-69]|(?:29|3[09]|62)[0-79]"],"0$1"],["(\\d{2})(\\d{3})(\\d{3,4})","$1 $2 $3",["29[013-9]|39|54"],"0$1"],["(\\d{4})(\\d{3,5})","$1 $2",["(?:25|54)8","258|5483"],"0$1"]],"0"]},"nonGeographic":{"800":["800",0,"(?:00|[1-9]\\d)\\d{6}",[8],[["(\\d{4})(\\d{4})","$1 $2",["\\d"]]],0,0,0,0,0,0,[0,0,["(?:00|[1-9]\\d)\\d{6}"]]],"808":["808",0,"[1-9]\\d{7}",[8],[["(\\d{4})(\\d{4})","$1 $2",["[1-9]"]]],0,0,0,0,0,0,[0,0,0,0,0,0,0,0,0,["[1-9]\\d{7}"]]],"870":["870",0,"7\\d{11}|[35-7]\\d{8}",[9,12],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["[35-7]"]]],0,0,0,0,0,0,[0,["(?:[356]|774[45])\\d{8}|7[6-8]\\d{7}"]]],"878":["878",0,"10\\d{10}",[12],[["(\\d{2})(\\d{5})(\\d{5})","$1 $2 $3",["1"]]],0,0,0,0,0,0,[0,0,0,0,0,0,0,0,["10\\d{10}"]]],"881":["881",0,"[0-36-9]\\d{8}",[9],[["(\\d)(\\d{3})(\\d{5})","$1 $2 $3",["[0-36-9]"]]],0,0,0,0,0,0,[0,["[0-36-9]\\d{8}"]]],"882":["882",0,"[13]\\d{6}(?:\\d{2,5})?|285\\d{9}|(?:[19]\\d|49)\\d{6}",[7,8,9,10,11,12],[["(\\d{2})(\\d{5})","$1 $2",["16|342"]],["(\\d{2})(\\d{6})","$1 $2",["4"]],["(\\d{2})(\\d{2})(\\d{4})","$1 $2 $3",["[19]"]],["(\\d{2})(\\d{4})(\\d{3})","$1 $2 $3",["3[23]"]],["(\\d{2})(\\d{3,4})(\\d{4})","$1 $2 $3",["1"]],["(\\d{2})(\\d{4})(\\d{4})","$1 $2 $3",["34[57]"]],["(\\d{3})(\\d{4})(\\d{4})","$1 $2 $3",["34"]],["(\\d{2})(\\d{4,5})(\\d{5})","$1 $2 $3",["[1-3]"]]],0,0,0,0,0,0,[0,["342\\d{4}|(?:337|49)\\d{6}|3(?:2|47|7\\d{3})\\d{7}",[7,8,9,10,12]],0,0,0,0,0,0,["1(?:3(?:0[0347]|[13][0139]|2[035]|4[013568]|6[0459]|7[06]|8[15-8]|9[0689])\\d{4}|6\\d{5,10})|(?:(?:285\\d\\d|3(?:45|[69]\\d{3}))\\d|9[89])\\d{6}"]]],"883":["883",0,"(?:210|370\\d\\d)\\d{7}|51\\d{7}(?:\\d{3})?",[9,10,12],[["(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3",["510"]],["(\\d{3})(\\d{3})(\\d{4})","$1 $2 $3",["2"]],["(\\d{4})(\\d{4})(\\d{4})","$1 $2 $3",["51[13]"]],["(\\d{3})(\\d{3})(\\d{3})(\\d{3})","$1 $2 $3 $4",["[35]"]]],0,0,0,0,0,0,[0,0,0,0,0,0,0,0,["(?:210|(?:370[1-9]|51[013]0)\\d)\\d{7}|5100\\d{5}"]]],"888":["888",0,"\\d{11}",[11],[["(\\d{3})(\\d{3})(\\d{5})","$1 $2 $3"]],0,0,0,0,0,0,[0,0,0,0,0,0,["\\d{11}"]]],"979":["979",0,"[1359]\\d{8}",[9],[["(\\d)(\\d{4})(\\d{4})","$1 $2 $3",["[1359]"]]],0,0,0,0,0,0,[0,0,0,["[1359]\\d{8}"]]]}}
-},{}],205:[function(require,module,exports){
+},{}],206:[function(require,module,exports){
 'use strict'
 
 var metadata = require('../metadata.min.json')
@@ -13667,7 +13753,7 @@ exports.DIGIT_PLACEHOLDER = core.DIGIT_PLACEHOLDER
 
 exports.parseRFC3966 = core.parseRFC3966
 exports.formatRFC3966 = core.formatRFC3966
-},{"../core/index.cjs":202,"../metadata.min.json":204}],206:[function(require,module,exports){
+},{"../core/index.cjs":203,"../metadata.min.json":205}],207:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13805,7 +13891,7 @@ alphanumeric['pl-Pl'] = alphanumeric['pl-PL'];
 decimal['pl-Pl'] = decimal['pl-PL']; // see #1455
 
 alpha['fa-AF'] = alpha.fa;
-},{}],207:[function(require,module,exports){
+},{}],208:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13839,7 +13925,7 @@ function contains(str, elem, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271,"./util/merge":273,"./util/toString":275}],208:[function(require,module,exports){
+},{"./util/assertString":272,"./util/merge":274,"./util/toString":276}],209:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13880,7 +13966,7 @@ function isAlpha(_str) {
 
 var locales = Object.keys(_alpha.alpha);
 exports.locales = locales;
-},{"./alpha":206,"./util/assertString":271}],209:[function(require,module,exports){
+},{"./alpha":207,"./util/assertString":272}],210:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13921,7 +14007,7 @@ function isAlphanumeric(_str) {
 
 var locales = Object.keys(_alpha.alphanumeric);
 exports.locales = locales;
-},{"./alpha":206,"./util/assertString":271}],210:[function(require,module,exports){
+},{"./alpha":207,"./util/assertString":272}],211:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13944,7 +14030,7 @@ function isAscii(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],211:[function(require,module,exports){
+},{"./util/assertString":272}],212:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -13974,7 +14060,7 @@ function isBIC(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isISO31661Alpha2":237,"./util/assertString":271}],212:[function(require,module,exports){
+},{"./isISO31661Alpha2":238,"./util/assertString":272}],213:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14001,7 +14087,7 @@ function isBase32(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],213:[function(require,module,exports){
+},{"./util/assertString":272}],214:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14040,7 +14126,7 @@ function isBase64(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271,"./util/merge":273}],214:[function(require,module,exports){
+},{"./util/assertString":272,"./util/merge":274}],215:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14071,7 +14157,7 @@ function isBoolean(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],215:[function(require,module,exports){
+},{"./util/assertString":272}],216:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14099,7 +14185,7 @@ function isBtcAddress(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],216:[function(require,module,exports){
+},{"./util/assertString":272}],217:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14134,7 +14220,7 @@ function isByteLength(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],217:[function(require,module,exports){
+},{"./util/assertString":272}],218:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14187,7 +14273,7 @@ function isCreditCard(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],218:[function(require,module,exports){
+},{"./util/assertString":272}],219:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14279,7 +14365,7 @@ function isCurrency(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271,"./util/merge":273}],219:[function(require,module,exports){
+},{"./util/assertString":272,"./util/merge":274}],220:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14333,7 +14419,7 @@ function isDataURI(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],220:[function(require,module,exports){
+},{"./util/assertString":272}],221:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14376,7 +14462,7 @@ function isDecimal(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./alpha":206,"./util/assertString":271,"./util/includes":272,"./util/merge":273}],221:[function(require,module,exports){
+},{"./alpha":207,"./util/assertString":272,"./util/includes":273,"./util/merge":274}],222:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14397,7 +14483,7 @@ function isDivisibleBy(str, num) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./toFloat":270,"./util/assertString":271}],222:[function(require,module,exports){
+},{"./toFloat":271,"./util/assertString":272}],223:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14483,7 +14569,7 @@ function isEAN(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],223:[function(require,module,exports){
+},{"./util/assertString":272}],224:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14681,7 +14767,7 @@ function isEmail(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isByteLength":216,"./isFQDN":225,"./isIP":234,"./util/assertString":271,"./util/merge":273}],224:[function(require,module,exports){
+},{"./isByteLength":217,"./isFQDN":226,"./isIP":235,"./util/assertString":272,"./util/merge":274}],225:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14702,7 +14788,7 @@ function isEthereumAddress(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],225:[function(require,module,exports){
+},{"./util/assertString":272}],226:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14792,7 +14878,7 @@ function isFQDN(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271,"./util/merge":273}],226:[function(require,module,exports){
+},{"./util/assertString":272,"./util/merge":274}],227:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14822,7 +14908,7 @@ function isFloat(str, options) {
 
 var locales = Object.keys(_alpha.decimal);
 exports.locales = locales;
-},{"./alpha":206,"./util/assertString":271}],227:[function(require,module,exports){
+},{"./alpha":207,"./util/assertString":272}],228:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14842,7 +14928,7 @@ function isFullWidth(str) {
   (0, _assertString.default)(str);
   return fullWidth.test(str);
 }
-},{"./util/assertString":271}],228:[function(require,module,exports){
+},{"./util/assertString":272}],229:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14871,7 +14957,7 @@ function isHSL(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],229:[function(require,module,exports){
+},{"./util/assertString":272}],230:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14891,7 +14977,7 @@ function isHalfWidth(str) {
   (0, _assertString.default)(str);
   return halfWidth.test(str);
 }
-},{"./util/assertString":271}],230:[function(require,module,exports){
+},{"./util/assertString":272}],231:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14927,7 +15013,7 @@ function isHash(str, algorithm) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],231:[function(require,module,exports){
+},{"./util/assertString":272}],232:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14948,7 +15034,7 @@ function isHexColor(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],232:[function(require,module,exports){
+},{"./util/assertString":272}],233:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -14969,7 +15055,7 @@ function isHexadecimal(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],233:[function(require,module,exports){
+},{"./util/assertString":272}],234:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15120,7 +15206,7 @@ function isIBAN(str) {
 
 var locales = Object.keys(ibanRegexThroughCountryCode);
 exports.locales = locales;
-},{"./util/assertString":271}],234:[function(require,module,exports){
+},{"./util/assertString":272}],235:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15196,7 +15282,7 @@ function isIP(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],235:[function(require,module,exports){
+},{"./util/assertString":272}],236:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15262,7 +15348,7 @@ function isISBN(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],236:[function(require,module,exports){
+},{"./util/assertString":272}],237:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15336,7 +15422,7 @@ function isISIN(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],237:[function(require,module,exports){
+},{"./util/assertString":272}],238:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15359,7 +15445,7 @@ function isISO31661Alpha2(str) {
 
 var CountryCodes = validISO31661Alpha2CountriesCodes;
 exports.CountryCodes = CountryCodes;
-},{"./util/assertString":271}],238:[function(require,module,exports){
+},{"./util/assertString":272}],239:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15381,7 +15467,7 @@ function isISO31661Alpha3(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],239:[function(require,module,exports){
+},{"./util/assertString":272}],240:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15441,7 +15527,7 @@ function isISO8601(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],240:[function(require,module,exports){
+},{"./util/assertString":272}],241:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15463,7 +15549,7 @@ function isISRC(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],241:[function(require,module,exports){
+},{"./util/assertString":272}],242:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15501,7 +15587,7 @@ function isISSN(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],242:[function(require,module,exports){
+},{"./util/assertString":272}],243:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15886,7 +15972,7 @@ function isIdentityCard(str, locale) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isInt":243,"./util/assertString":271}],243:[function(require,module,exports){
+},{"./isInt":244,"./util/assertString":272}],244:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15917,7 +16003,7 @@ function isInt(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],244:[function(require,module,exports){
+},{"./util/assertString":272}],245:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15959,7 +16045,7 @@ function isJSON(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271,"./util/merge":273}],245:[function(require,module,exports){
+},{"./util/assertString":272,"./util/merge":274}],246:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -15991,7 +16077,7 @@ function isJWT(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isBase64":213,"./util/assertString":271}],246:[function(require,module,exports){
+},{"./isBase64":214,"./util/assertString":272}],247:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16029,7 +16115,7 @@ function isLatLong(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271,"./util/merge":273}],247:[function(require,module,exports){
+},{"./util/assertString":272,"./util/merge":274}],248:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16065,7 +16151,7 @@ function isLength(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],248:[function(require,module,exports){
+},{"./util/assertString":272}],249:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16091,7 +16177,7 @@ function isLocale(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],249:[function(require,module,exports){
+},{"./util/assertString":272}],250:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16110,7 +16196,7 @@ function isLowercase(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],250:[function(require,module,exports){
+},{"./util/assertString":272}],251:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16141,7 +16227,7 @@ function isMACAddress(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],251:[function(require,module,exports){
+},{"./util/assertString":272}],252:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16162,7 +16248,7 @@ function isMagnetURI(url) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],252:[function(require,module,exports){
+},{"./util/assertString":272}],253:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16214,7 +16300,7 @@ function isMimeType(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],253:[function(require,module,exports){
+},{"./util/assertString":272}],254:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16415,7 +16501,7 @@ function isMobilePhone(str, locale, options) {
 
 var locales = Object.keys(phones);
 exports.locales = locales;
-},{"./util/assertString":271}],254:[function(require,module,exports){
+},{"./util/assertString":272}],255:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16436,7 +16522,7 @@ function isMongoId(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isHexadecimal":232,"./util/assertString":271}],255:[function(require,module,exports){
+},{"./isHexadecimal":233,"./util/assertString":272}],256:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16459,7 +16545,7 @@ function isMultibyte(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],256:[function(require,module,exports){
+},{"./util/assertString":272}],257:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16487,7 +16573,7 @@ function isNumeric(str, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./alpha":206,"./util/assertString":271}],257:[function(require,module,exports){
+},{"./alpha":207,"./util/assertString":272}],258:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16508,7 +16594,7 @@ function isOctal(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],258:[function(require,module,exports){
+},{"./util/assertString":272}],259:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16647,7 +16733,7 @@ function isPassportNumber(str, countryCode) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],259:[function(require,module,exports){
+},{"./util/assertString":272}],260:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16668,7 +16754,7 @@ function isPort(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isInt":243}],260:[function(require,module,exports){
+},{"./isInt":244}],261:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16778,7 +16864,7 @@ function isPostalCode(str, locale) {
 
   throw new Error("Invalid locale '".concat(locale, "'"));
 }
-},{"./util/assertString":271}],261:[function(require,module,exports){
+},{"./util/assertString":272}],262:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16812,7 +16898,7 @@ function isRFC3339(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],262:[function(require,module,exports){
+},{"./util/assertString":272}],263:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16842,7 +16928,7 @@ function isRgbColor(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],263:[function(require,module,exports){
+},{"./util/assertString":272}],264:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16871,7 +16957,7 @@ function isSemVer(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271,"./util/multilineRegex":274}],264:[function(require,module,exports){
+},{"./util/assertString":272,"./util/multilineRegex":275}],265:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -16892,7 +16978,7 @@ function isSurrogatePair(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],265:[function(require,module,exports){
+},{"./util/assertString":272}],266:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17101,7 +17187,7 @@ function isURL(url, options) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isFQDN":225,"./isIP":234,"./util/assertString":271,"./util/merge":273}],266:[function(require,module,exports){
+},{"./isFQDN":226,"./isIP":235,"./util/assertString":272,"./util/merge":274}],267:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17130,7 +17216,7 @@ function isUUID(str, version) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],267:[function(require,module,exports){
+},{"./util/assertString":272}],268:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17149,7 +17235,7 @@ function isUppercase(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],268:[function(require,module,exports){
+},{"./util/assertString":272}],269:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17172,7 +17258,7 @@ function isVariableWidth(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isFullWidth":227,"./isHalfWidth":229,"./util/assertString":271}],269:[function(require,module,exports){
+},{"./isFullWidth":228,"./isHalfWidth":230,"./util/assertString":272}],270:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17196,7 +17282,7 @@ function matches(str, pattern, modifiers) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./util/assertString":271}],270:[function(require,module,exports){
+},{"./util/assertString":272}],271:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17215,7 +17301,7 @@ function toFloat(str) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{"./isFloat":226}],271:[function(require,module,exports){
+},{"./isFloat":227}],272:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17238,7 +17324,7 @@ function assertString(input) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{}],272:[function(require,module,exports){
+},{}],273:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17256,7 +17342,7 @@ var _default = includes;
 exports.default = _default;
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{}],273:[function(require,module,exports){
+},{}],274:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17279,7 +17365,7 @@ function merge() {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{}],274:[function(require,module,exports){
+},{}],275:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17302,7 +17388,7 @@ function multilineRegexp(parts, flags) {
 
 module.exports = exports.default;
 module.exports.default = exports.default;
-},{}],275:[function(require,module,exports){
+},{}],276:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {

@@ -18,9 +18,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProjectInput = exports.autobind = void 0;
+exports.data = exports.ProjectInput = exports.autobind = void 0;
 const validators_js_1 = require("./validators.js");
 const resource_js_1 = require("./resource.js");
+const ProjectOutput_js_1 = require("./ProjectOutput.js");
 // autobind decorator
 function autobind(_, _2, descriptor) {
     const originalMethod = descriptor.value;
@@ -104,14 +105,14 @@ class ProjectInput {
                     if (this.nameInputElement instanceof HTMLInputElement) {
                         console.log("input name");
                         // in case of inserting a new resource or existing resource
-                        if (data.addResource(validator.title.trim(), validator.amount) === resource_js_1.Result.Add) {
+                        if (exports.data.addResource(validator.title.trim(), validator.amount) === resource_js_1.Result.Add) {
                             this.addOptionBorrow(validator.title); // adds option to the borrow select options
                         }
                     }
                     else {
                         // in case of borrowing a resource
                         console.log("select input");
-                        data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title.trim(), -Math.abs(validator.amount)
+                        exports.data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title.trim(), -Math.abs(validator.amount)
                         // makes negative to reduce resource amount
                         );
                         console.log("borrow resource");
@@ -120,7 +121,7 @@ class ProjectInput {
                     }
                 }
                 this.clearInputs();
-                console.log(data.getResources);
+                console.log(exports.data.getResources);
             }
             else {
                 console.log(userInput);
@@ -143,16 +144,14 @@ class ProjectInput {
         select.appendChild(newOption);
     }
     amountHandler() {
-        // a function to remove empty resurces from relevant list and storage.
+        // a function to remove empty resurces from borrow select list
         let select = document.getElementById("list");
-        if (data.getResources) {
-            data.getResources.forEach((r) => {
-                var _a;
+        if (exports.data.getResources) {
+            exports.data.getResources.forEach((r) => {
                 let node = document.getElementById(r.getResourceName);
                 if (r.getResourceAmount === 0) {
                     select.removeChild(node);
-                    (_a = data.getResources) === null || _a === void 0 ? void 0 : _a.splice(data.getResources.indexOf(r), 1);
-                    // remove the option of empty resource from options list and from the resource storage array
+                    // remove the option of empty resource from options list
                 }
             });
         }
@@ -166,10 +165,11 @@ __decorate([
 ], ProjectInput.prototype, "submitHandler", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
-const data = resource_js_1.ResourceStorage.getInstance();
+exports.data = resource_js_1.ResourceStorage.getInstance();
 try {
     const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
     const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
+    const prjOutput = new ProjectOutput_js_1.ProjectOutput();
 }
 catch (e) {
     console.log("no favicon");

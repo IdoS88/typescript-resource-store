@@ -40,6 +40,19 @@ class ResourceStorage {
     constructor() {
         this.listeners = [];
         this.resources = [];
+        this.addListener(this.removesEmptyResources);
+    }
+    removesEmptyResources() {
+        console.log(this);
+        console.log(this.resources);
+        const relevantResources = this.resources.slice().filter((r) => {
+            if (r.getResourceAmount > 0) {
+                return true;
+            }
+            else
+                return false;
+        });
+        this.setResources = relevantResources;
     }
     static getInstance() {
         if (this.instance) {
@@ -59,7 +72,7 @@ class ResourceStorage {
         // first checks if input isn't for the first item of resource storage array or if it's of an existing item
         //because there are 2 options wether we want to add a new item or update existing item
         if (Array.isArray(this.getResources) &&
-            this.getResources.length !== 0 &&
+            this.getResources.length > 0 &&
             this.getResources.some(function (r) {
                 return r.getResourceName === title;
             })) {
@@ -70,12 +83,16 @@ class ResourceStorage {
         else if (this.resources.push(nr)) {
             console.log("push new item");
             // add a new item to resources array
+            this.executeListeners();
+            return Result.Add;
         }
+        return null;
+    }
+    executeListeners() {
         for (const listenerFn of this.listeners) {
-            this[listenerFn.name](this.resources.slice());
-            // console.log(listenerFn);
+            // (this as any)[listenerFn.name](this.resources.slice());
+            listenerFn();
         }
-        return Result.Add;
     }
     get getResources() {
         if (this.resources)
@@ -150,6 +167,7 @@ class ResourceStorage {
                 return;
             }
             this.getResources[i].updateResourceAmount = r.getResourceAmount;
+            this.executeListeners();
             return;
         }
         else {

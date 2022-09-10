@@ -1,6 +1,7 @@
 import { Post } from "./validators.js";
 import { ValidationOptions } from "class-validator";
 import { Resource, ResourceStorage, Result} from "./resource.js";
+import {ProjectOutput} from "./ProjectOutput.js"
 // autobind decorator
 export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
@@ -141,15 +142,14 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
   }
 
   public amountHandler() {
-    // a function to remove empty resurces from relevant list and storage.
+    // a function to remove empty resurces from borrow select list
     let select = document.getElementById("list")!;
     if (data.getResources) {
       data.getResources.forEach((r) => {
         let node = document.getElementById(r.getResourceName)!;
         if (r.getResourceAmount === 0) {
           select.removeChild(node);
-          data.getResources?.splice(data.getResources.indexOf(r), 1);
-          // remove the option of empty resource from options list and from the resource storage array
+          // remove the option of empty resource from options list
         }
       });
     }
@@ -171,6 +171,7 @@ try {
     "list",
     "amountBorrow"
   );
+  const prjOutput = new ProjectOutput();
 } catch (e) {
   console.log("no favicon");
   console.log(e);

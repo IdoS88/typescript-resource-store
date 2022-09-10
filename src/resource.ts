@@ -2,7 +2,8 @@ import { IsInt, validate } from "class-validator";
 import { Post } from "./validators";
 
 // Project State Management
-type Listener = (items: Resource[]) => void;
+// type Listener = (items: Resource[]) => void;
+type Listener = () => void;
 export enum Result {
   Add,
   Update,
@@ -33,8 +34,20 @@ export class ResourceStorage {
   private resources: Resource[] = [];
   private static instance: ResourceStorage;
 
-  private constructor() {}
+  private constructor() {
+    this.addListener(this.removesEmptyResources);
+  }
 
+  public removesEmptyResources() {
+    console.log(this);
+    console.log(this.resources);
+    const relevantResources = this.resources.slice().filter((r) => {
+      if (r.getResourceAmount > 0) {
+        return true;
+      } else return false;
+    });
+    this.setResources = relevantResources;
+  }
   static getInstance() {
     if (this.instance) {
       return this.instance;
@@ -58,14 +71,13 @@ export class ResourceStorage {
     //because there are 2 options wether we want to add a new item or update existing item
     if (
       Array.isArray(this.getResources) &&
-      this.getResources.length !== 0 &&
+      this.getResources.length > 0 &&
       this.getResources.some(function (r) {
         return r.getResourceName === title;
       })
     ) {
       // update item
       this.UpdateExistingItemOrBorrowItem = nr;
-      this.executeListeners();
       return Result.Update;
     } else if (this.resources.push(nr)) {
       console.log("push new item");
@@ -77,7 +89,8 @@ export class ResourceStorage {
   }
   executeListeners() {
     for (const listenerFn of this.listeners) {
-      (this as any)[listenerFn.name](this.resources.slice());
+      // (this as any)[listenerFn.name](this.resources.slice());
+      listenerFn();
     }
   }
   get getResources() {
@@ -168,6 +181,7 @@ export class ResourceStorage {
         return;
       }
       this.getResources[i].updateResourceAmount = r.getResourceAmount;
+      this.executeListeners();
       return;
     } else {
       throw new Error("Update failed: there isn't any item in the storage");
