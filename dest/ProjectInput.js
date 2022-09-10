@@ -104,14 +104,14 @@ class ProjectInput {
                     if (this.nameInputElement instanceof HTMLInputElement) {
                         console.log("input name");
                         // in case of inserting a new resource or existing resource
-                        if (data.addResource(validator.title.trim(), validator.amount)) {
+                        if (data.addResource(validator.title.trim(), validator.amount) === resource_js_1.Result.Add) {
                             this.addOptionBorrow(validator.title); // adds option to the borrow select options
                         }
                     }
                     else {
                         // in case of borrowing a resource
                         console.log("select input");
-                        data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title, -Math.abs(validator.amount)
+                        data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title.trim(), -Math.abs(validator.amount)
                         // makes negative to reduce resource amount
                         );
                         console.log("borrow resource");

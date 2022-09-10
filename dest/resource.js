@@ -9,8 +9,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ResourceStorage = exports.Resource = void 0;
+exports.ResourceStorage = exports.Resource = exports.Result = void 0;
 const class_validator_1 = require("class-validator");
+var Result;
+(function (Result) {
+    Result[Result["Add"] = 0] = "Add";
+    Result[Result["Update"] = 1] = "Update";
+})(Result = exports.Result || (exports.Result = {}));
 class Resource {
     constructor(name, amount) {
         this.name = name;
@@ -60,7 +65,7 @@ class ResourceStorage {
             })) {
             // update item
             this.UpdateExistingItemOrBorrowItem = nr;
-            return false;
+            return Result.Update;
         }
         else if (this.resources.push(nr)) {
             console.log("push new item");
@@ -70,7 +75,7 @@ class ResourceStorage {
             this[listenerFn.name](this.resources.slice());
             // console.log(listenerFn);
         }
-        return true;
+        return Result.Add;
     }
     get getResources() {
         if (this.resources)

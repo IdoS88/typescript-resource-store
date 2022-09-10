@@ -105,14 +105,14 @@ class ProjectInput {
                     if (this.nameInputElement instanceof HTMLInputElement) {
                         console.log("input name");
                         // in case of inserting a new resource or existing resource
-                        if (data.addResource(validator.title.trim(), validator.amount)) {
+                        if (data.addResource(validator.title.trim(), validator.amount) === resource_js_1.Result.Add) {
                             this.addOptionBorrow(validator.title); // adds option to the borrow select options
                         }
                     }
                     else {
                         // in case of borrowing a resource
                         console.log("select input");
-                        data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title, -Math.abs(validator.amount)
+                        data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title.trim(), -Math.abs(validator.amount)
                         // makes negative to reduce resource amount
                         );
                         console.log("borrow resource");
@@ -139,6 +139,7 @@ class ProjectInput {
         let select = document.getElementById("list");
         let newOption = document.createElement("option");
         newOption.value = title;
+        newOption.id = title;
         newOption.innerHTML = title;
         select.appendChild(newOption);
     }
@@ -148,7 +149,7 @@ class ProjectInput {
         if (data.getResources) {
             data.getResources.forEach((r) => {
                 var _a;
-                let node = document.getElementById(`#${r.getResourceName}`);
+                let node = document.getElementById(r.getResourceName);
                 if (r.getResourceAmount === 0) {
                     select.removeChild(node);
                     (_a = data.getResources) === null || _a === void 0 ? void 0 : _a.splice(data.getResources.indexOf(r), 1);
@@ -188,8 +189,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ResourceStorage = exports.Resource = void 0;
+exports.ResourceStorage = exports.Resource = exports.Result = void 0;
 const class_validator_1 = require("class-validator");
+var Result;
+(function (Result) {
+    Result[Result["Add"] = 0] = "Add";
+    Result[Result["Update"] = 1] = "Update";
+})(Result = exports.Result || (exports.Result = {}));
 class Resource {
     constructor(name, amount) {
         this.name = name;
@@ -239,7 +245,7 @@ class ResourceStorage {
             })) {
             // update item
             this.UpdateExistingItemOrBorrowItem = nr;
-            return false;
+            return Result.Update;
         }
         else if (this.resources.push(nr)) {
             console.log("push new item");
@@ -249,7 +255,7 @@ class ResourceStorage {
             this[listenerFn.name](this.resources.slice());
             // console.log(listenerFn);
         }
-        return true;
+        return Result.Add;
     }
     get getResources() {
         if (this.resources)
@@ -17323,4 +17329,3 @@ function toString(input) {
 module.exports = exports.default;
 module.exports.default = exports.default;
 },{}]},{},[1]);
-

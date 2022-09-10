@@ -3,6 +3,10 @@ import { Post } from "./validators";
 
 // Project State Management
 type Listener = (items: Resource[]) => void;
+export enum Result {
+  Add,
+  Update,
+}
 
 export class Resource {
   [k: string]: any;
@@ -43,7 +47,7 @@ export class ResourceStorage {
     this.listeners.push(listenerFn);
   }
 
-  addResource(title: string, amount: number) {
+  addResource(title: string, amount: number): Result{
     // create instance of resource
     const nr = new Resource(
       title,
@@ -61,7 +65,7 @@ export class ResourceStorage {
     ) {
       // update item
       this.UpdateExistingItemOrBorrowItem = nr;
-      return false;
+      return Result.Update;
     } else if (this.resources.push(nr)) {
       console.log("push new item");
       // add a new item to resources array
@@ -71,7 +75,7 @@ export class ResourceStorage {
       (this as any)[listenerFn.name](this.resources.slice());
       // console.log(listenerFn);
     }
-    return true;
+    return Result.Add;
   }
   get getResources() {
     if (this.resources) return this.resources;

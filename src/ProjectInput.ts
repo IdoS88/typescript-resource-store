@@ -1,7 +1,6 @@
 import { Post } from "./validators.js";
 import { ValidationOptions } from "class-validator";
-import { Resource, ResourceStorage } from "./resource.js";
-import { Http2ServerRequest } from "http2";
+import { Resource, ResourceStorage, Result} from "./resource.js";
 // autobind decorator
 export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
@@ -99,14 +98,14 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
         if (this.nameInputElement instanceof HTMLInputElement) {
           console.log("input name")
           // in case of inserting a new resource or existing resource
-          if (data.addResource(validator.title.trim(), validator.amount)) {
+          if (data.addResource(validator.title.trim(), validator.amount) === Result.Add ) {
             this.addOptionBorrow(validator.title); // adds option to the borrow select options
           }
         } else {
           // in case of borrowing a resource
           console.log("select input")
           data.UpdateExistingItemOrBorrowItem = new Resource(
-            validator.title,
+            validator.title.trim(),
             -Math.abs(validator.amount)
             // makes negative to reduce resource amount
           );
