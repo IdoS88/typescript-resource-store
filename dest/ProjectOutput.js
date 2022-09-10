@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectOutput = void 0;
-const ProjectInput_1 = require("./ProjectInput");
+const ProjectInput_js_1 = require("./ProjectInput.js");
 class ProjectOutput {
     constructor() {
         this.templateElement = document.getElementById("storage-status");
@@ -13,34 +13,34 @@ class ProjectOutput {
             console.log("element isn't undefined");
         // first output
         this.renderContent();
-        ProjectInput_1.data.addListener(this.renderResources);
+        ProjectInput_js_1.data.addListener(this.renderResources);
         this.attach();
     }
     attach() {
         this.hostElement.insertAdjacentElement("afterbegin", this.element);
     }
-    renderResources() {
+    renderResources(resources) {
         const content = document.getElementById("content"); // paragraph created in rendercontent()
         content.innerHTML = ""; // reseting content text for new rendering
-        if (ProjectInput_1.data.getResources) {
+        if (resources) {
             //rendering intro message
-            if (ProjectInput_1.data.getResourcesLength === 0) {
+            if (resources.length === 0) {
                 this.renderDefaultMessage(content);
             }
-            else if (ProjectInput_1.data.getResourcesLength === 1) {
+            else if (resources.length === 1) {
                 const textNode = document.createTextNode("Currently there is " +
-                    ProjectInput_1.data.getResourcesLength +
+                    resources.length +
                     " resource in storage: \r\n the resource is: \r\n ");
                 content.appendChild(textNode);
             }
             else {
                 const textNode = document.createTextNode("Currently there are " +
-                    ProjectInput_1.data.getResourcesLength +
+                    resources.length +
                     " resources in storage: \r\n the resources are: \r\n");
                 content.appendChild(textNode);
             }
             //rendering actual contents
-            for (const prjItem of ProjectInput_1.data.getResources) {
+            for (const prjItem of resources) {
                 content.textContent +=
                     "\r\n resource name: " +
                         prjItem.getResourceName +

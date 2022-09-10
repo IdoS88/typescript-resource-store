@@ -1,4 +1,5 @@
-import { data } from "./ProjectInput";
+import { data } from "./ProjectInput.js";
+import { Resource } from "./resource.js";
 
 export class ProjectOutput {
   templateElement: HTMLTemplateElement;
@@ -26,24 +27,24 @@ export class ProjectOutput {
   private attach() {
     this.hostElement.insertAdjacentElement("afterbegin", this.element);
   }
-  private renderResources() {
+  private renderResources(resources: Resource[]) {
     const content = document.getElementById("content")!; // paragraph created in rendercontent()
     content.innerHTML = ""; // reseting content text for new rendering
-    if (data.getResources) {
+    if (resources) {
       //rendering intro message
-      if (data.getResourcesLength === 0) {
+      if (resources.length === 0) {
         this.renderDefaultMessage(content as HTMLParagraphElement);
-      } else if (data.getResourcesLength === 1) {
+      } else if (resources.length === 1) {
         const textNode = document.createTextNode(
           "Currently there is " +
-            data.getResourcesLength +
+            resources.length +
             " resource in storage: \r\n the resource is: \r\n "
         );
         content.appendChild(textNode);
       } else {
         const textNode = document.createTextNode(
           "Currently there are " +
-            data.getResourcesLength +
+            resources.length +
             " resources in storage: \r\n the resources are: \r\n"
         );
         content.appendChild(textNode);
@@ -51,7 +52,7 @@ export class ProjectOutput {
 
 
       //rendering actual contents
-      for (const prjItem of data.getResources) {
+      for (const prjItem of resources) {
         content.textContent +=
           "\r\n resource name: " +
           prjItem.getResourceName +

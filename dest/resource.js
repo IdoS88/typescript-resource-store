@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResourceStorage = exports.Resource = exports.Result = void 0;
 const class_validator_1 = require("class-validator");
+// type Listener = () => void;
 var Result;
 (function (Result) {
     Result[Result["Add"] = 0] = "Add";
@@ -42,17 +43,15 @@ class ResourceStorage {
         this.resources = [];
         this.addListener(this.removesEmptyResources);
     }
-    removesEmptyResources() {
-        console.log(this);
-        console.log(this.resources);
-        const relevantResources = this.resources.slice().filter((r) => {
+    removesEmptyResources(resources) {
+        const relevantResources = resources.filter((r) => {
             if (r.getResourceAmount > 0) {
                 return true;
             }
             else
                 return false;
         });
-        this.setResources = relevantResources;
+        // no need to set the relevant array because the relevent array was passed and changed by reference
     }
     static getInstance() {
         if (this.instance) {
@@ -63,6 +62,12 @@ class ResourceStorage {
     }
     addListener(listenerFn) {
         this.listeners.push(listenerFn);
+    }
+    executeListeners() {
+        for (const listenerFn of this.listeners) {
+            // (this as any)[listenerFn.name](this.resources.slice());
+            listenerFn(this.resources);
+        }
     }
     addResource(title, amount) {
         // create instance of resource
@@ -87,12 +92,6 @@ class ResourceStorage {
             return Result.Add;
         }
         return null;
-    }
-    executeListeners() {
-        for (const listenerFn of this.listeners) {
-            // (this as any)[listenerFn.name](this.resources.slice());
-            listenerFn();
-        }
     }
     get getResources() {
         if (this.resources)

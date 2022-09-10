@@ -25,6 +25,7 @@ const resource_js_1 = require("./resource.js");
 const ProjectOutput_js_1 = require("./ProjectOutput.js");
 // autobind decorator
 function autobind(_, _2, descriptor) {
+    console.log(descriptor);
     const originalMethod = descriptor.value;
     const adjDescriptor = {
         configurable: true,
@@ -106,7 +107,8 @@ class ProjectInput {
                     if (this.nameInputElement instanceof HTMLInputElement) {
                         console.log("input name");
                         // in case of inserting a new resource or existing resource
-                        if (exports.data.addResource(validator.title.trim(), validator.amount) === resource_js_1.Result.Add) {
+                        if (exports.data.addResource(validator.title.trim(), validator.amount) ===
+                            resource_js_1.Result.Add) {
                             this.addOptionBorrow(validator.title); // adds option to the borrow select options
                         }
                     }
@@ -117,8 +119,6 @@ class ProjectInput {
                         // makes negative to reduce resource amount
                         );
                         console.log("borrow resource");
-                        this.amountHandler();
-                        //remove empty resources
                     }
                 }
                 this.clearInputs();
@@ -131,6 +131,9 @@ class ProjectInput {
     }
     configure() {
         this.element.addEventListener("submit", this.submitHandler);
+        if (this.nameInputElement instanceof HTMLSelectElement) {
+            this.element.addEventListener("submit", this.amountHandler);
+        }
     }
     //   private attach() {
     //     this.hostElement.insertAdjacentElement('afterbegin', this.element);
@@ -144,7 +147,7 @@ class ProjectInput {
         newOption.innerHTML = title;
         select.appendChild(newOption);
     }
-    amountHandler() {
+    amountHandler(event) {
         // a function to remove empty resurces from borrow select list
         let select = document.getElementById("list");
         if (exports.data.getResources) {
@@ -164,6 +167,12 @@ __decorate([
     __metadata("design:paramtypes", [Event]),
     __metadata("design:returntype", Promise)
 ], ProjectInput.prototype, "submitHandler", null);
+__decorate([
+    autobind,
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Event]),
+    __metadata("design:returntype", void 0)
+], ProjectInput.prototype, "amountHandler", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 exports.data = resource_js_1.ResourceStorage.getInstance();
@@ -181,7 +190,7 @@ catch (e) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectOutput = void 0;
-const ProjectInput_1 = require("./ProjectInput");
+const ProjectInput_js_1 = require("./ProjectInput.js");
 class ProjectOutput {
     constructor() {
         this.templateElement = document.getElementById("storage-status");
@@ -193,34 +202,34 @@ class ProjectOutput {
             console.log("element isn't undefined");
         // first output
         this.renderContent();
-        ProjectInput_1.data.addListener(this.renderResources);
+        ProjectInput_js_1.data.addListener(this.renderResources);
         this.attach();
     }
     attach() {
         this.hostElement.insertAdjacentElement("afterbegin", this.element);
     }
-    renderResources() {
+    renderResources(resources) {
         const content = document.getElementById("content"); // paragraph created in rendercontent()
         content.innerHTML = ""; // reseting content text for new rendering
-        if (ProjectInput_1.data.getResources) {
+        if (resources) {
             //rendering intro message
-            if (ProjectInput_1.data.getResourcesLength === 0) {
+            if (resources.length === 0) {
                 this.renderDefaultMessage(content);
             }
-            else if (ProjectInput_1.data.getResourcesLength === 1) {
+            else if (resources.length === 1) {
                 const textNode = document.createTextNode("Currently there is " +
-                    ProjectInput_1.data.getResourcesLength +
+                    resources.length +
                     " resource in storage: \r\n the resource is: \r\n ");
                 content.appendChild(textNode);
             }
             else {
                 const textNode = document.createTextNode("Currently there are " +
-                    ProjectInput_1.data.getResourcesLength +
+                    resources.length +
                     " resources in storage: \r\n the resources are: \r\n");
                 content.appendChild(textNode);
             }
             //rendering actual contents
-            for (const prjItem of ProjectInput_1.data.getResources) {
+            for (const prjItem of resources) {
                 content.textContent +=
                     "\r\n resource name: " +
                         prjItem.getResourceName +
@@ -245,7 +254,7 @@ class ProjectOutput {
 }
 exports.ProjectOutput = ProjectOutput;
 
-},{"./ProjectInput":1}],3:[function(require,module,exports){
+},{"./ProjectInput.js":1}],3:[function(require,module,exports){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -259,6 +268,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResourceStorage = exports.Resource = exports.Result = void 0;
 const class_validator_1 = require("class-validator");
+// type Listener = () => void;
 var Result;
 (function (Result) {
     Result[Result["Add"] = 0] = "Add";
@@ -290,17 +300,15 @@ class ResourceStorage {
         this.resources = [];
         this.addListener(this.removesEmptyResources);
     }
-    removesEmptyResources() {
-        console.log(this);
-        console.log(this.resources);
-        const relevantResources = this.resources.slice().filter((r) => {
+    removesEmptyResources(resources) {
+        const relevantResources = resources.filter((r) => {
             if (r.getResourceAmount > 0) {
                 return true;
             }
             else
                 return false;
         });
-        this.setResources = relevantResources;
+        // no need to set the relevant array because the relevent array was passed and changed by reference
     }
     static getInstance() {
         if (this.instance) {
@@ -311,6 +319,12 @@ class ResourceStorage {
     }
     addListener(listenerFn) {
         this.listeners.push(listenerFn);
+    }
+    executeListeners() {
+        for (const listenerFn of this.listeners) {
+            // (this as any)[listenerFn.name](this.resources.slice());
+            listenerFn(this.resources);
+        }
     }
     addResource(title, amount) {
         // create instance of resource
@@ -335,12 +349,6 @@ class ResourceStorage {
             return Result.Add;
         }
         return null;
-    }
-    executeListeners() {
-        for (const listenerFn of this.listeners) {
-            // (this as any)[listenerFn.name](this.resources.slice());
-            listenerFn();
-        }
     }
     get getResources() {
         if (this.resources)

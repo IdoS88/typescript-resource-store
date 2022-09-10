@@ -24,6 +24,7 @@ const resource_js_1 = require("./resource.js");
 const ProjectOutput_js_1 = require("./ProjectOutput.js");
 // autobind decorator
 function autobind(_, _2, descriptor) {
+    console.log(descriptor);
     const originalMethod = descriptor.value;
     const adjDescriptor = {
         configurable: true,
@@ -105,7 +106,8 @@ class ProjectInput {
                     if (this.nameInputElement instanceof HTMLInputElement) {
                         console.log("input name");
                         // in case of inserting a new resource or existing resource
-                        if (exports.data.addResource(validator.title.trim(), validator.amount) === resource_js_1.Result.Add) {
+                        if (exports.data.addResource(validator.title.trim(), validator.amount) ===
+                            resource_js_1.Result.Add) {
                             this.addOptionBorrow(validator.title); // adds option to the borrow select options
                         }
                     }
@@ -116,8 +118,6 @@ class ProjectInput {
                         // makes negative to reduce resource amount
                         );
                         console.log("borrow resource");
-                        this.amountHandler();
-                        //remove empty resources
                     }
                 }
                 this.clearInputs();
@@ -130,6 +130,9 @@ class ProjectInput {
     }
     configure() {
         this.element.addEventListener("submit", this.submitHandler);
+        if (this.nameInputElement instanceof HTMLSelectElement) {
+            this.element.addEventListener("submit", this.amountHandler);
+        }
     }
     //   private attach() {
     //     this.hostElement.insertAdjacentElement('afterbegin', this.element);
@@ -143,7 +146,7 @@ class ProjectInput {
         newOption.innerHTML = title;
         select.appendChild(newOption);
     }
-    amountHandler() {
+    amountHandler(event) {
         // a function to remove empty resurces from borrow select list
         let select = document.getElementById("list");
         if (exports.data.getResources) {
@@ -163,6 +166,12 @@ __decorate([
     __metadata("design:paramtypes", [Event]),
     __metadata("design:returntype", Promise)
 ], ProjectInput.prototype, "submitHandler", null);
+__decorate([
+    autobind,
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Event]),
+    __metadata("design:returntype", void 0)
+], ProjectInput.prototype, "amountHandler", null);
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 exports.data = resource_js_1.ResourceStorage.getInstance();

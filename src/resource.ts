@@ -2,8 +2,8 @@ import { IsInt, validate } from "class-validator";
 import { Post } from "./validators";
 
 // Project State Management
-// type Listener = (items: Resource[]) => void;
-type Listener = () => void;
+type Listener = (items: Resource[]) => void;
+// type Listener = () => void;
 export enum Result {
   Add,
   Update,
@@ -38,15 +38,13 @@ export class ResourceStorage {
     this.addListener(this.removesEmptyResources);
   }
 
-  public removesEmptyResources() {
-    console.log(this);
-    console.log(this.resources);
-    const relevantResources = this.resources.slice().filter((r) => {
+  public removesEmptyResources(resources:Resource[]) {
+    const relevantResources = resources.filter((r) => {
       if (r.getResourceAmount > 0) {
         return true;
       } else return false;
-    });
-    this.setResources = relevantResources;
+    }); 
+    // no need to set the relevant array because the relevent array was passed and changed by reference
   }
   static getInstance() {
     if (this.instance) {
@@ -58,6 +56,13 @@ export class ResourceStorage {
 
   addListener(listenerFn: Listener) {
     this.listeners.push(listenerFn);
+  }
+
+  executeListeners() {
+    for (const listenerFn of this.listeners) {
+      // (this as any)[listenerFn.name](this.resources.slice());
+      listenerFn(this.resources);
+    }
   }
 
   addResource(title: string, amount: number): Result | null {
@@ -87,12 +92,7 @@ export class ResourceStorage {
     }
     return null;
   }
-  executeListeners() {
-    for (const listenerFn of this.listeners) {
-      // (this as any)[listenerFn.name](this.resources.slice());
-      listenerFn();
-    }
-  }
+
   get getResources() {
     if (this.resources) return this.resources;
     else return null;

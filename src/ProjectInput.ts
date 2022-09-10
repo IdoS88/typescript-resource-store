@@ -1,9 +1,10 @@
 import { Post } from "./validators.js";
 import { ValidationOptions } from "class-validator";
-import { Resource, ResourceStorage, Result} from "./resource.js";
-import {ProjectOutput} from "./ProjectOutput.js"
+import { Resource, ResourceStorage, Result } from "./resource.js";
+import { ProjectOutput } from "./ProjectOutput.js";
 // autobind decorator
 export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
+  console.log(descriptor);
   const originalMethod = descriptor.value;
   const adjDescriptor: PropertyDescriptor = {
     configurable: true,
@@ -97,23 +98,23 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
       if (await validator.validate()) {
         // first validate the input
         if (this.nameInputElement instanceof HTMLInputElement) {
-          console.log("input name")
+          console.log("input name");
           // in case of inserting a new resource or existing resource
-          if (data.addResource(validator.title.trim(), validator.amount) === Result.Add ) {
+          if (
+            data.addResource(validator.title.trim(), validator.amount) ===
+            Result.Add
+          ) {
             this.addOptionBorrow(validator.title); // adds option to the borrow select options
           }
         } else {
           // in case of borrowing a resource
-          console.log("select input")
+          console.log("select input");
           data.UpdateExistingItemOrBorrowItem = new Resource(
             validator.title.trim(),
             -Math.abs(validator.amount)
             // makes negative to reduce resource amount
           );
           console.log("borrow resource");
-
-          this.amountHandler();
-          //remove empty resources
         }
       }
       this.clearInputs();
@@ -125,6 +126,9 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
 
   public configure() {
     this.element.addEventListener("submit", this.submitHandler);
+    if (this.nameInputElement instanceof HTMLSelectElement) {
+      this.element.addEventListener("submit", this.amountHandler);
+    }
   }
 
   //   private attach() {
@@ -141,7 +145,8 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
     select.appendChild(newOption);
   }
 
-  public amountHandler() {
+  @autobind
+  public amountHandler(event: Event) {
     // a function to remove empty resurces from borrow select list
     let select = document.getElementById("list")!;
     if (data.getResources) {
