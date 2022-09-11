@@ -19,7 +19,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.data = exports.ProjectInput = exports.autobind = void 0;
+exports.prjOutput = exports.data = exports.ProjectInput = exports.autobind = void 0;
 const validators_js_1 = require("./validators.js");
 const resource_js_1 = require("./resource.js");
 const ProjectOutput_js_1 = require("./ProjectOutput.js");
@@ -143,22 +143,32 @@ class ProjectInput {
         let select = document.getElementById("list");
         let newOption = document.createElement("option");
         newOption.value = title;
-        newOption.id = title;
+        newOption.id = "option-" + title; // stating it's an option to prevent from amountHandler function to remove any HTMLElement that isn't an option from select list
+        console.log(newOption.tagName + " " + newOption.nodeName);
         newOption.innerHTML = title;
         select.appendChild(newOption);
+        console.log(select);
     }
     amountHandler(event) {
+        var _a;
         // a function to remove empty resurces from borrow select list
         let select = document.getElementById("list");
         if (exports.data.getResources) {
-            exports.data.getResources.forEach((r) => {
-                let node = document.getElementById(r.getResourceName);
-                if (r.getResourceAmount === 0) {
-                    select.removeChild(node);
-                    // remove the option of empty resource from options list
-                }
-            });
+            let array = Array.from(select.options);
+            for (let i = 0; i < select.length; i++) {
+                let check = (_a = exports.data.getResources) === null || _a === void 0 ? void 0 : _a.slice().filter((r) => {
+                    if (r.getResourceName.localeCompare(select.options[i].value) === 0)
+                        return true;
+                    else
+                        return false;
+                }); // filter to know if resource option still included in the array
+                if (Array.isArray(check) && check.length < 1)
+                    // resource option isn't included in array, resource was empty and deleted
+                    select.options.remove(i);
+                //therefore remove the option of empty resource from options list
+            }
         }
+        console.log(select);
     }
 }
 __decorate([
@@ -176,21 +186,14 @@ __decorate([
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 exports.data = resource_js_1.ResourceStorage.getInstance();
-try {
-    const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
-    const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
-    const prjOutput = new ProjectOutput_js_1.ProjectOutput();
-}
-catch (e) {
-    console.log("no favicon");
-    console.log(e);
-}
+const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
+const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
+exports.prjOutput = new ProjectOutput_js_1.ProjectOutput();
 
 },{"./ProjectOutput.js":2,"./resource.js":3,"./validators.js":4}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectOutput = void 0;
-const ProjectInput_js_1 = require("./ProjectInput.js");
 class ProjectOutput {
     constructor() {
         this.templateElement = document.getElementById("storage-status");
@@ -202,7 +205,6 @@ class ProjectOutput {
             console.log("element isn't undefined");
         // first output
         this.renderContent();
-        ProjectInput_js_1.data.addListener(this.renderResources);
         this.attach();
     }
     attach() {
@@ -247,14 +249,13 @@ class ProjectOutput {
         // this.element.querySelector('h2')!.id = headerId;
         this.element.querySelector("h2").textContent = "Storage Status"; // title header
         const p = document.createElement("p"); // paragraph for showing content
-        this.renderDefaultMessage(p); // set default status message with no resources
         p.id = "content";
-        this.element.appendChild(p);
+        this.renderDefaultMessage(p); // set default status message with no resources
     }
 }
 exports.ProjectOutput = ProjectOutput;
 
-},{"./ProjectInput.js":1}],3:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -268,6 +269,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResourceStorage = exports.Resource = exports.Result = void 0;
 const class_validator_1 = require("class-validator");
+const ProjectInput_js_1 = require("./ProjectInput.js");
 // type Listener = () => void;
 var Result;
 (function (Result) {
@@ -301,6 +303,7 @@ class ResourceStorage {
         this.addListener(this.removesEmptyResources);
     }
     removesEmptyResources(resources) {
+        console.log(this);
         const relevantResources = resources.filter((r) => {
             if (r.getResourceAmount > 0) {
                 return true;
@@ -308,6 +311,8 @@ class ResourceStorage {
             else
                 return false;
         });
+        this.setResources = relevantResources;
+        console.log(this.resources);
         // no need to set the relevant array because the relevent array was passed and changed by reference
     }
     static getInstance() {
@@ -323,7 +328,7 @@ class ResourceStorage {
     executeListeners() {
         for (const listenerFn of this.listeners) {
             // (this as any)[listenerFn.name](this.resources.slice());
-            listenerFn(this.resources);
+            this[listenerFn.name](this.resources);
         }
     }
     addResource(title, amount) {
@@ -346,6 +351,7 @@ class ResourceStorage {
             console.log("push new item");
             // add a new item to resources array
             this.executeListeners();
+            ProjectInput_js_1.prjOutput.renderResources(this.resources);
             return Result.Add;
         }
         return null;
@@ -424,6 +430,8 @@ class ResourceStorage {
             }
             this.getResources[i].updateResourceAmount = r.getResourceAmount;
             this.executeListeners();
+            ProjectInput_js_1.prjOutput.renderResources(this.resources);
+            console.log(this.resources);
             return;
         }
         else {
@@ -442,7 +450,7 @@ exports.ResourceStorage = ResourceStorage;
 // }
 // console.log(item.getResourceAmount + item.getResourceName);
 
-},{"class-validator":114}],4:[function(require,module,exports){
+},{"./ProjectInput.js":1,"class-validator":114}],4:[function(require,module,exports){
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;

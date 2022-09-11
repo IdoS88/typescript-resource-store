@@ -18,7 +18,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.data = exports.ProjectInput = exports.autobind = void 0;
+exports.prjOutput = exports.data = exports.ProjectInput = exports.autobind = void 0;
 const validators_js_1 = require("./validators.js");
 const resource_js_1 = require("./resource.js");
 const ProjectOutput_js_1 = require("./ProjectOutput.js");
@@ -142,22 +142,32 @@ class ProjectInput {
         let select = document.getElementById("list");
         let newOption = document.createElement("option");
         newOption.value = title;
-        newOption.id = title;
+        newOption.id = "option-" + title; // stating it's an option to prevent from amountHandler function to remove any HTMLElement that isn't an option from select list
+        console.log(newOption.tagName + " " + newOption.nodeName);
         newOption.innerHTML = title;
         select.appendChild(newOption);
+        console.log(select);
     }
     amountHandler(event) {
+        var _a;
         // a function to remove empty resurces from borrow select list
         let select = document.getElementById("list");
         if (exports.data.getResources) {
-            exports.data.getResources.forEach((r) => {
-                let node = document.getElementById(r.getResourceName);
-                if (r.getResourceAmount === 0) {
-                    select.removeChild(node);
-                    // remove the option of empty resource from options list
-                }
-            });
+            let array = Array.from(select.options);
+            for (let i = 0; i < select.length; i++) {
+                let check = (_a = exports.data.getResources) === null || _a === void 0 ? void 0 : _a.slice().filter((r) => {
+                    if (r.getResourceName.localeCompare(select.options[i].value) === 0)
+                        return true;
+                    else
+                        return false;
+                }); // filter to know if resource option still included in the array
+                if (Array.isArray(check) && check.length < 1)
+                    // resource option isn't included in array, resource was empty and deleted
+                    select.options.remove(i);
+                //therefore remove the option of empty resource from options list
+            }
         }
+        console.log(select);
     }
 }
 __decorate([
@@ -175,13 +185,7 @@ __decorate([
 exports.ProjectInput = ProjectInput;
 // export declare var data : ResourceStorage;
 exports.data = resource_js_1.ResourceStorage.getInstance();
-try {
-    const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
-    const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
-    const prjOutput = new ProjectOutput_js_1.ProjectOutput();
-}
-catch (e) {
-    console.log("no favicon");
-    console.log(e);
-}
+const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
+const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
+exports.prjOutput = new ProjectOutput_js_1.ProjectOutput();
 //# sourceMappingURL=ProjectInput.js.map

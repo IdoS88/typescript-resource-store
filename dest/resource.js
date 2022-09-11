@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResourceStorage = exports.Resource = exports.Result = void 0;
 const class_validator_1 = require("class-validator");
+const ProjectInput_js_1 = require("./ProjectInput.js");
 // type Listener = () => void;
 var Result;
 (function (Result) {
@@ -44,6 +45,7 @@ class ResourceStorage {
         this.addListener(this.removesEmptyResources);
     }
     removesEmptyResources(resources) {
+        console.log(this);
         const relevantResources = resources.filter((r) => {
             if (r.getResourceAmount > 0) {
                 return true;
@@ -51,6 +53,8 @@ class ResourceStorage {
             else
                 return false;
         });
+        this.setResources = relevantResources;
+        console.log(this.resources);
         // no need to set the relevant array because the relevent array was passed and changed by reference
     }
     static getInstance() {
@@ -66,7 +70,7 @@ class ResourceStorage {
     executeListeners() {
         for (const listenerFn of this.listeners) {
             // (this as any)[listenerFn.name](this.resources.slice());
-            listenerFn(this.resources);
+            this[listenerFn.name](this.resources);
         }
     }
     addResource(title, amount) {
@@ -89,6 +93,7 @@ class ResourceStorage {
             console.log("push new item");
             // add a new item to resources array
             this.executeListeners();
+            ProjectInput_js_1.prjOutput.renderResources(this.resources);
             return Result.Add;
         }
         return null;
@@ -167,6 +172,8 @@ class ResourceStorage {
             }
             this.getResources[i].updateResourceAmount = r.getResourceAmount;
             this.executeListeners();
+            ProjectInput_js_1.prjOutput.renderResources(this.resources);
+            console.log(this.resources);
             return;
         }
         else {

@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectOutput = void 0;
-const ProjectInput_js_1 = require("./ProjectInput.js");
 class ProjectOutput {
     constructor() {
         this.templateElement = document.getElementById("storage-status");
@@ -13,7 +12,6 @@ class ProjectOutput {
             console.log("element isn't undefined");
         // first output
         this.renderContent();
-        ProjectInput_js_1.data.addListener(this.renderResources);
         this.attach();
     }
     attach() {
@@ -58,9 +56,8 @@ class ProjectOutput {
         // this.element.querySelector('h2')!.id = headerId;
         this.element.querySelector("h2").textContent = "Storage Status"; // title header
         const p = document.createElement("p"); // paragraph for showing content
-        this.renderDefaultMessage(p); // set default status message with no resources
         p.id = "content";
-        this.element.appendChild(p);
+        this.renderDefaultMessage(p); // set default status message with no resources
     }
 }
 exports.ProjectOutput = ProjectOutput;

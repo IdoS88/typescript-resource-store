@@ -20,14 +20,12 @@ export class ProjectOutput {
     if (this.element instanceof Element) console.log("element isn't undefined");
     // first output
     this.renderContent();
-
-    data.addListener(this.renderResources);
     this.attach();
   }
   private attach() {
     this.hostElement.insertAdjacentElement("afterbegin", this.element);
   }
-  private renderResources(resources: Resource[]) {
+  public renderResources(resources: Resource[]) {
     const content = document.getElementById("content")!; // paragraph created in rendercontent()
     content.innerHTML = ""; // reseting content text for new rendering
     if (resources) {
@@ -72,8 +70,7 @@ export class ProjectOutput {
     // this.element.querySelector('h2')!.id = headerId;
     this.element.querySelector("h2")!.textContent = "Storage Status"; // title header
     const p = document.createElement("p"); // paragraph for showing content
-    this.renderDefaultMessage(p); // set default status message with no resources
     p.id = "content";
-    this.element.appendChild(p);
+    this.renderDefaultMessage(p); // set default status message with no resources
   }
 }

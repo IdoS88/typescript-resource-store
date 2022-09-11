@@ -140,44 +140,47 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
     let select = document.getElementById("list")!;
     let newOption = document.createElement("option");
     newOption.value = title;
-    newOption.id = title;
+    newOption.id = "option-" + title; // stating it's an option to prevent from amountHandler function to remove any HTMLElement that isn't an option from select list
+    console.log(newOption.tagName + " " + newOption.nodeName);
     newOption.innerHTML = title;
     select.appendChild(newOption);
+    console.log(select);
   }
 
   @autobind
   public amountHandler(event: Event) {
     // a function to remove empty resurces from borrow select list
-    let select = document.getElementById("list")!;
+    let select = document.getElementById("list")! as HTMLSelectElement;
     if (data.getResources) {
-      data.getResources.forEach((r) => {
-        let node = document.getElementById(r.getResourceName)!;
-        if (r.getResourceAmount === 0) {
-          select.removeChild(node);
-          // remove the option of empty resource from options list
-        }
-      });
+      let array = Array.from(select.options);
+      for (let i = 0; i < select.length; i++) {
+        let check = data.getResources?.slice().filter((r) => {
+          if (r.getResourceName.localeCompare(select.options[i].value) === 0)
+            return true;
+          else return false;
+        }); // filter to know if resource option still included in the array
+        if (Array.isArray(check) && check.length < 1)
+          // resource option isn't included in array, resource was empty and deleted
+          select.options.remove(i);
+        //therefore remove the option of empty resource from options list
+      }
     }
+    console.log(select);
   }
 }
 
 // export declare var data : ResourceStorage;
 export const data = ResourceStorage.getInstance();
-try {
-  const prjInputInsert = new ProjectInput<HTMLInputElement>(
-    "status",
-    "formInsert",
-    "type",
-    "amountInsertion"
-  );
-  const prjInputBorrow = new ProjectInput<HTMLSelectElement>(
-    "status",
-    "formBorrow",
-    "list",
-    "amountBorrow"
-  );
-  const prjOutput = new ProjectOutput();
-} catch (e) {
-  console.log("no favicon");
-  console.log(e);
-}
+const prjInputInsert = new ProjectInput<HTMLInputElement>(
+  "status",
+  "formInsert",
+  "type",
+  "amountInsertion"
+);
+const prjInputBorrow = new ProjectInput<HTMLSelectElement>(
+  "status",
+  "formBorrow",
+  "list",
+  "amountBorrow"
+);
+export const prjOutput = new ProjectOutput();
