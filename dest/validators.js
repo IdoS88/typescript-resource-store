@@ -21,11 +21,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Post = void 0;
 const class_validator_1 = require("class-validator");
 class Post {
-    // [Symbol.iterator]: function* () {
-    //   let properties = Object.keys(this);
-    //   for (let i of properties) {
-    //       yield [i, this[i]];
-    //   }
     set setTitle(title) {
         this.title = title;
     }
@@ -51,14 +46,11 @@ class Post {
                 console.log("validation failed. errors: ", valErrors);
                 alertAllErrors(valErrors);
                 return false;
-                // return valErrors;
             }
             else {
                 console.log("validation succeed");
                 return true;
-                // return valErrors;
             }
-            // return errors;
             return false;
         });
     }
@@ -72,9 +64,7 @@ __decorate([
 ], Post.prototype, "title", void 0);
 __decorate([
     (0, class_validator_1.Max)(Number.MAX_SAFE_INTEGER),
-    (0, class_validator_1.Min)(1)
-    // @Max(10)
-    ,
+    (0, class_validator_1.Min)(1),
     (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
 ], Post.prototype, "amount", void 0);

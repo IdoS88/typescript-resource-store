@@ -1,5 +1,5 @@
 import { Post } from "./validators.js";
-import { ValidationOptions } from "class-validator";
+import { validate, ValidationOptions } from "class-validator";
 import { Resource, ResourceStorage, Result } from "./resource.js";
 import { ProjectOutput } from "./ProjectOutput.js";
 // autobind decorator
@@ -15,125 +15,109 @@ export function autobind(_: any, _2: string, descriptor: PropertyDescriptor) {
   };
   return adjDescriptor;
 }
+
+// return type to specify the action for the addResource function
 enum InputType {
   Insert = "insert",
   Borrow = "borrow",
 }
 
+// a "generator" function to set appropriate name for resource
+function toTitleCase(str: string) {
+  return str.replace(
+    /\w\S*/g,
+    function(txt) {
+      return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    }
+  );
+}
+
 // ProjectInput Class
 export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
-  //   templateElement: HTMLTemplateElement;
-  hostElement: HTMLDivElement;
+
   element: HTMLFormElement;
   nameInputElement: T;
   amountInputElement: HTMLInputElement;
-  // peopleInputElement: HTMLInputElement;
 
   constructor(
-    divElement: string,
     formElement: string,
-    nameElement: string,
-    amountElement: string
+    nameElement: string, // input text for name of resource
+    amountElement: string // input text for amount of resource
   ) {
-    // this.templateElement = document.getElementById(
-    //   'project-input'
-    // )! as HTMLTemplateElement;
-    this.hostElement = document.getElementById(divElement)! as HTMLDivElement;
-    // const importedNode = document.importNode(
-    //   this.templateElement.content,
-    //   true
-    // );
     this.element = document.querySelector(`#${formElement}`) as HTMLFormElement;
-    //"#formInsert"
-    // this.element.id = 'user-input';
-    if (this.element == null) console.log("null element");
+
     this.nameInputElement = this.element.querySelector(
       `#${nameElement}`
-      //"#type"
     ) as T;
-    if (this.nameInputElement == null) console.log("null element");
+
+    
     this.amountInputElement = this.element.querySelector(
       `#${amountElement}`
-      // "#amountInsertion"
     ) as HTMLInputElement;
-    // this.peopleInputElement = this.element.querySelector(
-    //   '#people'
-    // ) as HTMLInputElement;
 
     this.configure();
-    // this.attach();
   }
+
+
   public gatherUserInput(): [string, number] | void {
+    // a function for retrieving inputs from text inputs in form
     const enteredName = this.nameInputElement.value;
     const enteredAmount = this.amountInputElement.value;
-    // const enteredPeople = this.peopleInputElement.value;
-
-    // if (
-    //   enteredName.trim().length === 1 ||
-    //   enteredAmount.trim().length === 0
-    //   //   ||enteredPeople.trim().length === 0
-    // ) {
-    //   alert("Invalid input, please try again!");
-    //   return;
-    // } else }
+ 
+ 
     return [enteredName, +enteredAmount];
-    // }
   }
 
   public clearInputs() {
+    // reseting default to inputs in form
     this.nameInputElement.value = "";
     this.amountInputElement.value = "";
-    // this.peopleInputElement.value = '';
   }
 
   @autobind
   public async submitHandler(event: Event) {
+    // a listner for both forms for adding a new resource or updating an existing one
     event.preventDefault();
-    const userInput = this.gatherUserInput();
-    if (Array.isArray(userInput)) {
+    const userInput = this.gatherUserInput(); // retrieve inputs from form
+    if (Array.isArray(userInput)) { // if there are inputs
       let validator = new Post();
       [validator.title, validator.amount] = userInput;
-      console.log(validator.title);
-      console.log(validator.amount);
-      if (await validator.validate()) {
+      if (await validator.validate()) { // validate if inputs are appropriate and valid
+        validator.title = toTitleCase(validator.title.trim()); // after validator convert title to appropriate one
         // first validate the input
         if (this.nameInputElement instanceof HTMLInputElement) {
-          console.log("input name");
           // in case of inserting a new resource or existing resource
           if (
-            data.addResource(validator.title.trim(), validator.amount) ===
-            Result.Add
+            data.addResource(validator.title, validator.amount) ===
+            Result.Add // if the action is adding a new resource
           ) {
             this.addOptionBorrow(validator.title); // adds option to the borrow select options
           }
         } else {
           // in case of borrowing a resource
-          console.log("select input");
+          // action can only reduce amount from existing resource
           data.UpdateExistingItemOrBorrowItem = new Resource(
-            validator.title.trim(),
+            validator.title,
             -Math.abs(validator.amount)
             // makes negative to reduce resource amount
           );
-          console.log("borrow resource");
         }
       }
       this.clearInputs();
-      console.log(data.getResources);
     } else {
-      console.log(userInput);
+      console.log("inputs are invalid");
     }
   }
 
   public configure() {
+    // a listner for both forms for adding a new resource or updating an existing one
     this.element.addEventListener("submit", this.submitHandler);
     if (this.nameInputElement instanceof HTMLSelectElement) {
+      // a listner for the second form for removing empty or unincluded resources
       this.element.addEventListener("submit", this.amountHandler);
     }
   }
 
-  //   private attach() {
-  //     this.hostElement.insertAdjacentElement('afterbegin', this.element);
-  //   }
   public addOptionBorrow(title: string) {
     // a function for first form for adding a new item to select list of the second form
 
@@ -155,7 +139,7 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
       let array = Array.from(select.options);
       for (let i = 0; i < select.length; i++) {
         let check = data.getResources?.slice().filter((r) => {
-          if (r.getResourceName.localeCompare(select.options[i].value) === 0)
+          if (r.getResourceName.localeCompare(select.options[i].value) === 0) // check if option exists in resources array
             return true;
           else return false;
         }); // filter to know if resource option still included in the array
@@ -165,22 +149,21 @@ export class ProjectInput<T extends HTMLSelectElement | HTMLInputElement> {
         //therefore remove the option of empty resource from options list
       }
     }
-    console.log(select);
   }
 }
 
-// export declare var data : ResourceStorage;
 export const data = ResourceStorage.getInstance();
+// first insertion form
 const prjInputInsert = new ProjectInput<HTMLInputElement>(
-  "status",
   "formInsert",
   "type",
   "amountInsertion"
 );
+// second borrow form
 const prjInputBorrow = new ProjectInput<HTMLSelectElement>(
-  "status",
   "formBorrow",
   "list",
   "amountBorrow"
 );
+//third window for output of resources status
 export const prjOutput = new ProjectOutput();

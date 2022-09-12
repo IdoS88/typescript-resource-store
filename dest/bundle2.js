@@ -37,107 +37,81 @@ function autobind(_, _2, descriptor) {
     return adjDescriptor;
 }
 exports.autobind = autobind;
+// return type to specify the action for the addResource function
 var InputType;
 (function (InputType) {
     InputType["Insert"] = "insert";
     InputType["Borrow"] = "borrow";
 })(InputType || (InputType = {}));
+// a "generator" function to set appropriate name for resource
+function toTitleCase(str) {
+    return str.replace(/\w\S*/g, function (txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
+}
 // ProjectInput Class
 class ProjectInput {
-    // peopleInputElement: HTMLInputElement;
-    constructor(divElement, formElement, nameElement, amountElement) {
-        // this.templateElement = document.getElementById(
-        //   'project-input'
-        // )! as HTMLTemplateElement;
-        this.hostElement = document.getElementById(divElement);
-        // const importedNode = document.importNode(
-        //   this.templateElement.content,
-        //   true
-        // );
+    constructor(formElement, nameElement, // input text for name of resource
+    amountElement // input text for amount of resource
+    ) {
         this.element = document.querySelector(`#${formElement}`);
-        //"#formInsert"
-        // this.element.id = 'user-input';
-        if (this.element == null)
-            console.log("null element");
-        this.nameInputElement = this.element.querySelector(`#${nameElement}`
-        //"#type"
-        );
-        if (this.nameInputElement == null)
-            console.log("null element");
-        this.amountInputElement = this.element.querySelector(`#${amountElement}`
-        // "#amountInsertion"
-        );
-        // this.peopleInputElement = this.element.querySelector(
-        //   '#people'
-        // ) as HTMLInputElement;
+        this.nameInputElement = this.element.querySelector(`#${nameElement}`);
+        this.amountInputElement = this.element.querySelector(`#${amountElement}`);
         this.configure();
-        // this.attach();
     }
     gatherUserInput() {
+        // a function for retrieving inputs from text inputs in form
         const enteredName = this.nameInputElement.value;
         const enteredAmount = this.amountInputElement.value;
-        // const enteredPeople = this.peopleInputElement.value;
-        // if (
-        //   enteredName.trim().length === 1 ||
-        //   enteredAmount.trim().length === 0
-        //   //   ||enteredPeople.trim().length === 0
-        // ) {
-        //   alert("Invalid input, please try again!");
-        //   return;
-        // } else }
         return [enteredName, +enteredAmount];
-        // }
     }
     clearInputs() {
+        // reseting default to inputs in form
         this.nameInputElement.value = "";
         this.amountInputElement.value = "";
-        // this.peopleInputElement.value = '';
     }
     submitHandler(event) {
         return __awaiter(this, void 0, void 0, function* () {
+            // a listner for both forms for adding a new resource or updating an existing one
             event.preventDefault();
-            const userInput = this.gatherUserInput();
-            if (Array.isArray(userInput)) {
+            const userInput = this.gatherUserInput(); // retrieve inputs from form
+            if (Array.isArray(userInput)) { // if there are inputs
                 let validator = new validators_js_1.Post();
                 [validator.title, validator.amount] = userInput;
-                console.log(validator.title);
-                console.log(validator.amount);
-                if (yield validator.validate()) {
+                if (yield validator.validate()) { // validate if inputs are appropriate and valid
+                    validator.title = toTitleCase(validator.title.trim()); // after validator convert title to appropriate one
                     // first validate the input
                     if (this.nameInputElement instanceof HTMLInputElement) {
-                        console.log("input name");
                         // in case of inserting a new resource or existing resource
-                        if (exports.data.addResource(validator.title.trim(), validator.amount) ===
-                            resource_js_1.Result.Add) {
+                        if (exports.data.addResource(validator.title, validator.amount) ===
+                            resource_js_1.Result.Add // if the action is adding a new resource
+                        ) {
                             this.addOptionBorrow(validator.title); // adds option to the borrow select options
                         }
                     }
                     else {
                         // in case of borrowing a resource
-                        console.log("select input");
-                        exports.data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title.trim(), -Math.abs(validator.amount)
+                        // action can only reduce amount from existing resource
+                        exports.data.UpdateExistingItemOrBorrowItem = new resource_js_1.Resource(validator.title, -Math.abs(validator.amount)
                         // makes negative to reduce resource amount
                         );
-                        console.log("borrow resource");
                     }
                 }
                 this.clearInputs();
-                console.log(exports.data.getResources);
             }
             else {
-                console.log(userInput);
+                console.log("inputs are invalid");
             }
         });
     }
     configure() {
+        // a listner for both forms for adding a new resource or updating an existing one
         this.element.addEventListener("submit", this.submitHandler);
         if (this.nameInputElement instanceof HTMLSelectElement) {
+            // a listner for the second form for removing empty or unincluded resources
             this.element.addEventListener("submit", this.amountHandler);
         }
     }
-    //   private attach() {
-    //     this.hostElement.insertAdjacentElement('afterbegin', this.element);
-    //   }
     addOptionBorrow(title) {
         // a function for first form for adding a new item to select list of the second form
         let select = document.getElementById("list");
@@ -157,7 +131,7 @@ class ProjectInput {
             let array = Array.from(select.options);
             for (let i = 0; i < select.length; i++) {
                 let check = (_a = exports.data.getResources) === null || _a === void 0 ? void 0 : _a.slice().filter((r) => {
-                    if (r.getResourceName.localeCompare(select.options[i].value) === 0)
+                    if (r.getResourceName.localeCompare(select.options[i].value) === 0) // check if option exists in resources array
                         return true;
                     else
                         return false;
@@ -168,7 +142,6 @@ class ProjectInput {
                 //therefore remove the option of empty resource from options list
             }
         }
-        console.log(select);
     }
 }
 __decorate([
@@ -184,10 +157,12 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ProjectInput.prototype, "amountHandler", null);
 exports.ProjectInput = ProjectInput;
-// export declare var data : ResourceStorage;
 exports.data = resource_js_1.ResourceStorage.getInstance();
-const prjInputInsert = new ProjectInput("status", "formInsert", "type", "amountInsertion");
-const prjInputBorrow = new ProjectInput("status", "formBorrow", "list", "amountBorrow");
+// first insertion form
+const prjInputInsert = new ProjectInput("formInsert", "type", "amountInsertion");
+// second borrow form
+const prjInputBorrow = new ProjectInput("formBorrow", "list", "amountBorrow");
+//third window for output of resources status
 exports.prjOutput = new ProjectOutput_js_1.ProjectOutput();
 
 },{"./ProjectOutput.js":2,"./resource.js":3,"./validators.js":4}],2:[function(require,module,exports){
@@ -204,13 +179,14 @@ class ProjectOutput {
         if (this.element instanceof Element)
             console.log("element isn't undefined");
         // first output
-        this.renderContent();
-        this.attach();
+        this.renderContent(); // render default messages in output
+        this.attach(); // adding elements of output to div section
     }
     attach() {
         this.hostElement.insertAdjacentElement("afterbegin", this.element);
     }
     renderResources(resources) {
+        // a function for rendering the status output of resources storage
         const content = document.getElementById("content"); // paragraph created in rendercontent()
         content.innerHTML = ""; // reseting content text for new rendering
         if (resources) {
@@ -219,24 +195,26 @@ class ProjectOutput {
                 this.renderDefaultMessage(content);
             }
             else if (resources.length === 1) {
-                const textNode = document.createTextNode("Currently there is " +
-                    resources.length +
-                    " resource in storage: \r\n the resource is: \r\n ");
-                content.appendChild(textNode);
+                content.innerHTML =
+                    "Currently there is " +
+                        resources.length +
+                        " resource in storage:<br> the resource is:<br> ";
             }
             else {
-                const textNode = document.createTextNode("Currently there are " +
-                    resources.length +
-                    " resources in storage: \r\n the resources are: \r\n");
-                content.appendChild(textNode);
+                content.innerHTML =
+                    "Currently there are " +
+                        resources.length +
+                        " resources in storage: <br> the resources are: <br>";
             }
-            //rendering actual contents
+            //rendering actual content of resource storage
             for (const prjItem of resources) {
-                content.textContent +=
-                    "\r\n resource name: " +
-                        prjItem.getResourceName +
-                        "\t amount: " +
-                        prjItem.getResourceAmount;
+                if (content.textContent) {
+                    content.innerHTML +=
+                        "<br> resource name: " +
+                            prjItem.getResourceName +
+                            "\t amount: " +
+                            prjItem.getResourceAmount;
+                }
             }
         }
     }
@@ -245,8 +223,6 @@ class ProjectOutput {
         p.appendChild(textNode);
     }
     renderContent() {
-        // const headerId = "title";
-        // this.element.querySelector('h2')!.id = headerId;
         this.element.querySelector("h2").textContent = "Storage Status"; // title header
         const p = document.createElement("p"); // paragraph for showing content
         p.id = "content";
@@ -270,7 +246,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResourceStorage = exports.Resource = exports.Result = void 0;
 const class_validator_1 = require("class-validator");
 const ProjectInput_js_1 = require("./ProjectInput.js");
-// type Listener = () => void;
 var Result;
 (function (Result) {
     Result[Result["Add"] = 0] = "Add";
@@ -303,7 +278,7 @@ class ResourceStorage {
         this.addListener(this.removesEmptyResources);
     }
     removesEmptyResources(resources) {
-        console.log(this);
+        // remove/filter existing resources from resources array with amount of 0 == empty
         const relevantResources = resources.filter((r) => {
             if (r.getResourceAmount > 0) {
                 return true;
@@ -312,8 +287,6 @@ class ResourceStorage {
                 return false;
         });
         this.setResources = relevantResources;
-        console.log(this.resources);
-        // no need to set the relevant array because the relevent array was passed and changed by reference
     }
     static getInstance() {
         if (this.instance) {
@@ -332,6 +305,7 @@ class ResourceStorage {
         }
     }
     addResource(title, amount) {
+        // a complex function for adding a new resource or updating an existing resource (+/- amount)
         // create instance of resource
         const nr = new Resource(title, amount
         // ProjectStatus.Active
@@ -351,10 +325,10 @@ class ResourceStorage {
             console.log("push new item");
             // add a new item to resources array
             this.executeListeners();
-            ProjectInput_js_1.prjOutput.renderResources(this.resources);
+            ProjectInput_js_1.prjOutput.renderResources(this.resources); // rendering the new data for output status  
             return Result.Add;
         }
-        return null;
+        return null; // failed
     }
     get getResources() {
         if (this.resources)
@@ -368,48 +342,16 @@ class ResourceStorage {
     get getResourcesLength() {
         return this.resources.length;
     }
-    // uniqByReduce(array: Resource[]) {
-    //   this.setResources = array.reduce((acc: Resource[], cur: Resource) => {
-    //     if (!acc.includes(cur)) {
-    //       acc.push(cur);
-    //     } else if (
-    //       acc.slice().filter(function (r) {
-    //         return r.getResourceName === cur.getResourceName;
-    //       }).length > 1
-    //     ) {
-    //       alert(
-    //         `update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`
-    //       );
-    //       console.log(
-    //         `update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`
-    //       );
-    //       // checks wether checked resource included in the array and just update it's amount
-    //       const i = acc.findIndex(
-    //         (r) => r.getResourceName === cur.getResourceName
-    //       );
-    //       if (cur.getResourceAmount >= acc[i].getResourceAmount) {
-    //         // index must be above -1 becuase it was questioned in the last if statement
-    //         acc[i] = acc.pop() as Resource;
-    //       } else {
-    //         acc.pop();
-    //         alert(
-    //           "Cannot update amount less than actual amount. for that please withdraw the amount that been taken"
-    //         );
-    //       }
-    //     }
-    //     return acc;
-    //   }, []);
-    // }
     set UpdateExistingItemOrBorrowItem(r) {
-        //a function to update existing item amount
+        //a function to update existing item amount (+/- amount)
         const i = this.resources.findIndex((checked) => checked.getResourceName === r.getResourceName);
         // find existing item to be able to update
         if (Array.isArray(this.getResources)) {
-            // stores previous amount to add new amount and for log porpouses
+            // stores previous amount to add new amount and for validation
             const previousAmount = this.getResources[i].getResourceAmount;
             try {
-                const sum = r.getResourceAmount + previousAmount;
-                if (sum < 0) {
+                const sum = r.getResourceAmount + previousAmount; // total amount
+                if (sum < 0) { // validation we have sufficient amount
                     alert("Cannot take more than " + previousAmount + " from this resource");
                     console.log("Cannot take more than " + previousAmount + " from this resource");
                     return;
@@ -418,7 +360,6 @@ class ResourceStorage {
                 console.log(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
             }
             catch (err) {
-                // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
                 alert("Update failed: updated amount is not in range (1 - " +
                     Number.MAX_SAFE_INTEGER +
                     ")");
@@ -428,10 +369,9 @@ class ResourceStorage {
                 console.log(err);
                 return;
             }
-            this.getResources[i].updateResourceAmount = r.getResourceAmount;
-            this.executeListeners();
-            ProjectInput_js_1.prjOutput.renderResources(this.resources);
-            console.log(this.resources);
+            this.getResources[i].updateResourceAmount = r.getResourceAmount; // adding more amount or reducing amount
+            this.executeListeners(); // removes empty resources from resource storage array
+            ProjectInput_js_1.prjOutput.renderResources(this.resources); // render updated status of resource storage array
             return;
         }
         else {
@@ -440,15 +380,6 @@ class ResourceStorage {
     }
 }
 exports.ResourceStorage = ResourceStorage;
-// export declare var data : ResourceStorage;
-// data = ResourceStorage.getInstance();
-// const item: Resource = new Resource("water", 100);
-// item.updateResourceAmount = 4;
-// let p = document.getElementById("status");
-// if (p) {
-//   p.innerHTML = item.getResourceAmount + item.getResourceName;
-// }
-// console.log(item.getResourceAmount + item.getResourceName);
 
 },{"./ProjectInput.js":1,"class-validator":114}],4:[function(require,module,exports){
 "use strict";
@@ -474,11 +405,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Post = void 0;
 const class_validator_1 = require("class-validator");
 class Post {
-    // [Symbol.iterator]: function* () {
-    //   let properties = Object.keys(this);
-    //   for (let i of properties) {
-    //       yield [i, this[i]];
-    //   }
     set setTitle(title) {
         this.title = title;
     }
@@ -504,14 +430,11 @@ class Post {
                 console.log("validation failed. errors: ", valErrors);
                 alertAllErrors(valErrors);
                 return false;
-                // return valErrors;
             }
             else {
                 console.log("validation succeed");
                 return true;
-                // return valErrors;
             }
-            // return errors;
             return false;
         });
     }
@@ -525,9 +448,7 @@ __decorate([
 ], Post.prototype, "title", void 0);
 __decorate([
     (0, class_validator_1.Max)(Number.MAX_SAFE_INTEGER),
-    (0, class_validator_1.Min)(1)
-    // @Max(10)
-    ,
+    (0, class_validator_1.Min)(1),
     (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
 ], Post.prototype, "amount", void 0);

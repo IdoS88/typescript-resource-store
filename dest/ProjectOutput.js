@@ -11,13 +11,14 @@ class ProjectOutput {
         if (this.element instanceof Element)
             console.log("element isn't undefined");
         // first output
-        this.renderContent();
-        this.attach();
+        this.renderContent(); // render default messages in output
+        this.attach(); // adding elements of output to div section
     }
     attach() {
         this.hostElement.insertAdjacentElement("afterbegin", this.element);
     }
     renderResources(resources) {
+        // a function for rendering the status output of resources storage
         const content = document.getElementById("content"); // paragraph created in rendercontent()
         content.innerHTML = ""; // reseting content text for new rendering
         if (resources) {
@@ -26,24 +27,26 @@ class ProjectOutput {
                 this.renderDefaultMessage(content);
             }
             else if (resources.length === 1) {
-                const textNode = document.createTextNode("Currently there is " +
-                    resources.length +
-                    " resource in storage: \r\n the resource is: \r\n ");
-                content.appendChild(textNode);
+                content.innerHTML =
+                    "Currently there is " +
+                        resources.length +
+                        " resource in storage:<br> the resource is:<br> ";
             }
             else {
-                const textNode = document.createTextNode("Currently there are " +
-                    resources.length +
-                    " resources in storage: \r\n the resources are: \r\n");
-                content.appendChild(textNode);
+                content.innerHTML =
+                    "Currently there are " +
+                        resources.length +
+                        " resources in storage: <br> the resources are: <br>";
             }
-            //rendering actual contents
+            //rendering actual content of resource storage
             for (const prjItem of resources) {
-                content.textContent +=
-                    "\r\n resource name: " +
-                        prjItem.getResourceName +
-                        "\t amount: " +
-                        prjItem.getResourceAmount;
+                if (content.textContent) {
+                    content.innerHTML +=
+                        "<br> resource name: " +
+                            prjItem.getResourceName +
+                            "\t amount: " +
+                            prjItem.getResourceAmount;
+                }
             }
         }
     }
@@ -52,8 +55,6 @@ class ProjectOutput {
         p.appendChild(textNode);
     }
     renderContent() {
-        // const headerId = "title";
-        // this.element.querySelector('h2')!.id = headerId;
         this.element.querySelector("h2").textContent = "Storage Status"; // title header
         const p = document.createElement("p"); // paragraph for showing content
         p.id = "content";

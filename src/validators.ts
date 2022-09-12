@@ -18,7 +18,7 @@ import {
   IsNotEmpty,
   minLength,
   MAX,
-  ValidatorOptions
+  ValidatorOptions,
 } from "class-validator";
 import { ProjectInput } from "./ProjectInput.js";
 export class Post {
@@ -30,14 +30,9 @@ export class Post {
 
   @Max(Number.MAX_SAFE_INTEGER)
   @Min(1)
-  // @Max(10)
   @IsInt()
   amount!: number;
-  // [Symbol.iterator]: function* () {
-  //   let properties = Object.keys(this);
-  //   for (let i of properties) {
-  //       yield [i, this[i]];
-  //   }
+
   set setTitle(title: string) {
     this.title = title;
   }
@@ -64,15 +59,10 @@ export class Post {
       console.log("validation failed. errors: ", valErrors);
       alertAllErrors(valErrors);
       return false;
-      // return valErrors;
     } else {
       console.log("validation succeed");
       return true;
-      // return valErrors;
     }
-
-    // return errors;
     return false;
   }
 }
-

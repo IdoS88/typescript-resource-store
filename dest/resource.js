@@ -12,7 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResourceStorage = exports.Resource = exports.Result = void 0;
 const class_validator_1 = require("class-validator");
 const ProjectInput_js_1 = require("./ProjectInput.js");
-// type Listener = () => void;
 var Result;
 (function (Result) {
     Result[Result["Add"] = 0] = "Add";
@@ -45,7 +44,7 @@ class ResourceStorage {
         this.addListener(this.removesEmptyResources);
     }
     removesEmptyResources(resources) {
-        console.log(this);
+        // remove/filter existing resources from resources array with amount of 0 == empty
         const relevantResources = resources.filter((r) => {
             if (r.getResourceAmount > 0) {
                 return true;
@@ -54,8 +53,6 @@ class ResourceStorage {
                 return false;
         });
         this.setResources = relevantResources;
-        console.log(this.resources);
-        // no need to set the relevant array because the relevent array was passed and changed by reference
     }
     static getInstance() {
         if (this.instance) {
@@ -74,6 +71,7 @@ class ResourceStorage {
         }
     }
     addResource(title, amount) {
+        // a complex function for adding a new resource or updating an existing resource (+/- amount)
         // create instance of resource
         const nr = new Resource(title, amount
         // ProjectStatus.Active
@@ -93,10 +91,10 @@ class ResourceStorage {
             console.log("push new item");
             // add a new item to resources array
             this.executeListeners();
-            ProjectInput_js_1.prjOutput.renderResources(this.resources);
+            ProjectInput_js_1.prjOutput.renderResources(this.resources); // rendering the new data for output status  
             return Result.Add;
         }
-        return null;
+        return null; // failed
     }
     get getResources() {
         if (this.resources)
@@ -110,48 +108,16 @@ class ResourceStorage {
     get getResourcesLength() {
         return this.resources.length;
     }
-    // uniqByReduce(array: Resource[]) {
-    //   this.setResources = array.reduce((acc: Resource[], cur: Resource) => {
-    //     if (!acc.includes(cur)) {
-    //       acc.push(cur);
-    //     } else if (
-    //       acc.slice().filter(function (r) {
-    //         return r.getResourceName === cur.getResourceName;
-    //       }).length > 1
-    //     ) {
-    //       alert(
-    //         `update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`
-    //       );
-    //       console.log(
-    //         `update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`
-    //       );
-    //       // checks wether checked resource included in the array and just update it's amount
-    //       const i = acc.findIndex(
-    //         (r) => r.getResourceName === cur.getResourceName
-    //       );
-    //       if (cur.getResourceAmount >= acc[i].getResourceAmount) {
-    //         // index must be above -1 becuase it was questioned in the last if statement
-    //         acc[i] = acc.pop() as Resource;
-    //       } else {
-    //         acc.pop();
-    //         alert(
-    //           "Cannot update amount less than actual amount. for that please withdraw the amount that been taken"
-    //         );
-    //       }
-    //     }
-    //     return acc;
-    //   }, []);
-    // }
     set UpdateExistingItemOrBorrowItem(r) {
-        //a function to update existing item amount
+        //a function to update existing item amount (+/- amount)
         const i = this.resources.findIndex((checked) => checked.getResourceName === r.getResourceName);
         // find existing item to be able to update
         if (Array.isArray(this.getResources)) {
-            // stores previous amount to add new amount and for log porpouses
+            // stores previous amount to add new amount and for validation
             const previousAmount = this.getResources[i].getResourceAmount;
             try {
-                const sum = r.getResourceAmount + previousAmount;
-                if (sum < 0) {
+                const sum = r.getResourceAmount + previousAmount; // total amount
+                if (sum < 0) { // validation we have sufficient amount
                     alert("Cannot take more than " + previousAmount + " from this resource");
                     console.log("Cannot take more than " + previousAmount + " from this resource");
                     return;
@@ -160,7 +126,6 @@ class ResourceStorage {
                 console.log(`update given resource: ${r.getResourceName} with given amount: ${sum}`);
             }
             catch (err) {
-                // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
                 alert("Update failed: updated amount is not in range (1 - " +
                     Number.MAX_SAFE_INTEGER +
                     ")");
@@ -170,10 +135,9 @@ class ResourceStorage {
                 console.log(err);
                 return;
             }
-            this.getResources[i].updateResourceAmount = r.getResourceAmount;
-            this.executeListeners();
-            ProjectInput_js_1.prjOutput.renderResources(this.resources);
-            console.log(this.resources);
+            this.getResources[i].updateResourceAmount = r.getResourceAmount; // adding more amount or reducing amount
+            this.executeListeners(); // removes empty resources from resource storage array
+            ProjectInput_js_1.prjOutput.renderResources(this.resources); // render updated status of resource storage array
             return;
         }
         else {
@@ -182,13 +146,4 @@ class ResourceStorage {
     }
 }
 exports.ResourceStorage = ResourceStorage;
-// export declare var data : ResourceStorage;
-// data = ResourceStorage.getInstance();
-// const item: Resource = new Resource("water", 100);
-// item.updateResourceAmount = 4;
-// let p = document.getElementById("status");
-// if (p) {
-//   p.innerHTML = item.getResourceAmount + item.getResourceName;
-// }
-// console.log(item.getResourceAmount + item.getResourceName);
 //# sourceMappingURL=resource.js.map

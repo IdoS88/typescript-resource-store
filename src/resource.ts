@@ -4,14 +4,12 @@ import { prjOutput } from "./ProjectInput.js";
 
 // Project State Management
 type Listener = (items: Resource[]) => void;
-// type Listener = () => void;
 export enum Result {
   Add,
   Update,
 }
 
 export class Resource {
-  // [k: string]: any;
   private name: string;
   @IsInt()
   private amount: number;
@@ -31,7 +29,7 @@ export class Resource {
   }
 }
 export class ResourceStorage {
-  [f: string]: any;
+  [f: string]: any; // for generic listener execution
   private listeners: Listener[] = [];
   private resources: Resource[] = [];
   private static instance: ResourceStorage;
@@ -40,8 +38,8 @@ export class ResourceStorage {
     this.addListener(this.removesEmptyResources);
   }
 
-  public removesEmptyResources(resources: Resource[]) {
-    console.log(this);
+  public removesEmptyResources(resources: Resource[]) { 
+    // remove/filter existing resources from resources array with amount of 0 == empty
     const relevantResources = resources.filter((r) => {
       if (r.getResourceAmount > 0) {
         return true;
@@ -49,8 +47,6 @@ export class ResourceStorage {
     });
 
     this.setResources = relevantResources;
-    console.log(this.resources);
-    // no need to set the relevant array because the relevent array was passed and changed by reference
   }
   static getInstance() {
     if (this.instance) {
@@ -72,6 +68,7 @@ export class ResourceStorage {
   }
 
   addResource(title: string, amount: number): Result | null {
+    // a complex function for adding a new resource or updating an existing resource (+/- amount)
     // create instance of resource
     const nr = new Resource(
       title,
@@ -94,10 +91,10 @@ export class ResourceStorage {
       console.log("push new item");
       // add a new item to resources array
       this.executeListeners();
-      prjOutput.renderResources(this.resources);
+      prjOutput.renderResources(this.resources); // rendering the new data for output status  
       return Result.Add;
     }
-    return null;
+    return null; // failed
   }
 
   get getResources() {
@@ -110,52 +107,21 @@ export class ResourceStorage {
   get getResourcesLength(): number {
     return this.resources.length;
   }
-  // uniqByReduce(array: Resource[]) {
-  //   this.setResources = array.reduce((acc: Resource[], cur: Resource) => {
-  //     if (!acc.includes(cur)) {
-  //       acc.push(cur);
-  //     } else if (
-  //       acc.slice().filter(function (r) {
-  //         return r.getResourceName === cur.getResourceName;
-  //       }).length > 1
-  //     ) {
-  //       alert(
-  //         `update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`
-  //       );
-  //       console.log(
-  //         `update given resource: ${cur.getResourceName} with given amount: ${cur.getResourceAmount}`
-  //       );
-  //       // checks wether checked resource included in the array and just update it's amount
-  //       const i = acc.findIndex(
-  //         (r) => r.getResourceName === cur.getResourceName
-  //       );
-  //       if (cur.getResourceAmount >= acc[i].getResourceAmount) {
-  //         // index must be above -1 becuase it was questioned in the last if statement
-  //         acc[i] = acc.pop() as Resource;
-  //       } else {
-  //         acc.pop();
-  //         alert(
-  //           "Cannot update amount less than actual amount. for that please withdraw the amount that been taken"
-  //         );
-  //       }
-  //     }
-  //     return acc;
-  //   }, []);
-  // }
+  
   set UpdateExistingItemOrBorrowItem(r: Resource) {
-    //a function to update existing item amount
+    //a function to update existing item amount (+/- amount)
     const i = this.resources.findIndex(
       (checked) => checked.getResourceName === r.getResourceName
     );
     // find existing item to be able to update
 
     if (Array.isArray(this.getResources)) {
-      // stores previous amount to add new amount and for log porpouses
+      // stores previous amount to add new amount and for validation
       const previousAmount = this.getResources[i].getResourceAmount;
       try {
-        const sum = r.getResourceAmount + previousAmount;
+        const sum = r.getResourceAmount + previousAmount; // total amount
 
-        if (sum < 0) {
+        if (sum < 0) { // validation we have sufficient amount
           alert(
             "Cannot take more than " + previousAmount + " from this resource"
           );
@@ -172,7 +138,6 @@ export class ResourceStorage {
           `update given resource: ${r.getResourceName} with given amount: ${sum}`
         );
       } catch (err) {
-        // throw new Error("Update failed: updated amount is not in range (1 - "+Number.MAX_SAFE_INTEGER+")");
 
         alert(
           "Update failed: updated amount is not in range (1 - " +
@@ -187,24 +152,12 @@ export class ResourceStorage {
         console.log(err);
         return;
       }
-      this.getResources[i].updateResourceAmount = r.getResourceAmount;
-      this.executeListeners();
-      prjOutput.renderResources(this.resources);
-      console.log(this.resources);
+      this.getResources[i].updateResourceAmount = r.getResourceAmount; // adding more amount or reducing amount
+      this.executeListeners(); // removes empty resources from resource storage array
+      prjOutput.renderResources(this.resources); // render updated status of resource storage array
       return;
     } else {
       throw new Error("Update failed: there isn't any item in the storage");
     }
   }
 }
-
-// export declare var data : ResourceStorage;
-// data = ResourceStorage.getInstance();
-
-// const item: Resource = new Resource("water", 100);
-// item.updateResourceAmount = 4;
-// let p = document.getElementById("status");
-// if (p) {
-//   p.innerHTML = item.getResourceAmount + item.getResourceName;
-// }
-// console.log(item.getResourceAmount + item.getResourceName);

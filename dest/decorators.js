@@ -1,4 +1,5 @@
 "use strict";
+// parameter decorators
 function isAnInteger(target, name, position) {
     if (!Number.isInteger(target))
         throw new Error("index must be an integer");
